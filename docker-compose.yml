@@ -24,7 +24,31 @@ services:
     networks:
       - redis_network
       - dbnetwork
-    
+
+  set_service:
+    build:
+      context: ./services/set
+      dockerfile: Dockerfile
+    command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    volumes:
+      - ./app:/usr/src/service/app
+      - ./core:/usr/src/service/core
+      - ./services/set/apis:/usr/src/service/apis
+      - static_volume:/usr/src/service/static
+      - media_volume:/usr/src/service/media
+      - ./services/set/pyproject.toml:/usr/src/service/pyproject.toml
+      - ./services/set/poetry.lock:/usr/src/service/poetry.lock
+    ports:
+      - 9002:8000
+    depends_on:
+      - redis
+      - db
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - redis_network
+      - dbnetwork
+
   notification_service:
     build:
       context: ./services/notification
@@ -46,7 +70,7 @@ services:
     networks:
       - redis_network
       - dbnetwork
-  
+
   apschedule:
     build:
       context: ./services/apschedule

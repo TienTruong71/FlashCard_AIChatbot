@@ -9,3 +9,13 @@ class NotificationFilter(filters.FilterSet):
         fields = {
             "is_read": ["exact"],
         }
+
+class SetFilter(filters.FilterSet):
+    q = filters.CharFilter(method="filter_by_q", label="Search Set")
+
+    def filter_by_q(self, queryset, name, value):
+        if value:
+            return queryset.filter(
+                Q(title__icontains=value) | Q(description__icontains=value)
+            ).distinct()
+        return queryset

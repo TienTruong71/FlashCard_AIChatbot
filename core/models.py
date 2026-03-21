@@ -80,14 +80,20 @@ class Notification(TimeStampedModel):
         ordering = ["-created"]
 
 
-class Set(TimeStampedModel):
+class Set(models.Model):
     user = models.ForeignKey( User, on_delete=models.CASCADE, related_name="sets" )
     title = models.CharField(max_length=255)
     description = models.CharField(max_length=255, blank=True)
-    isPublic = models.BooleanField(default=False)
-    createAt = models.DateTimeField(auto_now_add=True)
-    updateAt = models.DateTimeField(auto_now=True)
-    isDelete = models.BooleanField(default=False)
+    is_public = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_deleted = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "sets"
+
+    def __str__(self):
+        return f"{self.title} {self.description} {self.is_public}"
 
 class SetShare(models.Model):
     PERMISSION_CHOICES = (
@@ -100,6 +106,9 @@ class SetShare(models.Model):
     permission = models.CharField(max_length=10, choices=PERMISSION_CHOICES)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "sets_share"
 
 
 class Question(models.Model):
@@ -118,6 +127,11 @@ class Question(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = "questions"
+
+    def __str__ (self):
+        return f"{self.set} {self.title} {self.type}"
 
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="answers")
@@ -127,6 +141,12 @@ class Answer(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "answers"
+
+    def __str__(self):
+        return f"{self.question} {self.content} {self.is_correct}"
 
 
 class Quiz(models.Model):
@@ -140,6 +160,12 @@ class Quiz(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "quizzes"
+
+    def __str__(self):
+        return f"{self.set} {self.title} {self.question_count} {self.is_public}"
 
 
 class QuizShare(models.Model):
@@ -155,6 +181,12 @@ class QuizShare(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        db_table = "quizzes_share"
+
+    def __str__(self):
+        return f"{self.quiz} {self.permission}"
+
 
 class QuizQuestion(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="quiz_questions")
@@ -165,6 +197,12 @@ class QuizQuestion(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "quizzes_question"
+
+    def __str__(self):
+        return f"{self.title} {self.type}"
 
 
 class QuizQuestionAnswer(models.Model):
@@ -180,6 +218,8 @@ class QuizQuestionAnswer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = "quizzes_question_answer"
 
 class Test(models.Model):
     STATUS_CHOICES = (
@@ -199,6 +239,11 @@ class Test(models.Model):
     last_answered_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        db_table = "tests"
+
+    def __str__ (self):
+        return f"{self.status} {self.score} {self.time_spent}"
 
 class TestAnswer(models.Model):
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="answers")
@@ -213,3 +258,6 @@ class TestAnswer(models.Model):
 
     is_correct = models.BooleanField(default=False)
     time_spent = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "tests_answer"
