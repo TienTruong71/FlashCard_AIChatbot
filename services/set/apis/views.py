@@ -137,4 +137,10 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(detail=True, methods=["post"], url_path="share")
+    def share(self, request, pk=None):
+        pk, error_response = self
+
+
+
 

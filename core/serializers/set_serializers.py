@@ -25,7 +25,6 @@ class CreateSetSerializer(serializers.ModelSerializer):
         required=True,
         error_messages={
             "required": "Please enter title!",
-            "invalid": "Enter a valid title!",
         },
     )
 
