@@ -5,12 +5,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from core.paginators import CustomPaginator
 from core.filters import SetFilter
-from core.models import Set
+from core.models import Set, User, SetShare
 
 from core.serializers.set_serializers import (
     UpdateSetSerializer,
     CreateSetSerializer,
     SetSerializer,
+)
+from core.serializers.set_share_serializers import(
+    ShareSetSerializer
 )
 from core.utils import global_response_errors
 
@@ -20,6 +23,8 @@ from .documents import (
     update_set_document,
     retrieve_set_document,
     delete_set_document,
+    share_set_document,
+    unshare_set_document,
 )
 
 
@@ -137,9 +142,89 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             status=status.HTTP_200_OK,
         )
 
+
+    @extend_schema(**share_set_document)
     @action(detail=True, methods=["post"], url_path="share")
     def share(self, request, pk=None):
-        pk, error_response = self
+        pk, error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        set, error_response = self.get_set(pk=pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ShareSetSerializer(data=request.data)
+        if not serializer.is_valid():
+            return global_response_errors(serializer.errors)
+
+        shares_data = serializer.validated_data["shares"]
+
+        shared_users = []
+        for item in shares_data:
+            user_id = item["user_id"]
+            permission = item["permission"]
+            try:
+                user = User.objects.get(id=user_id)
+                SetShare.objects.update_or_create(
+                    set=set,
+                    user=user,
+                    defaults={"permission": permission}
+                )
+                shared_users.append(
+                    {
+                        "user_id" : user_id,
+                        "permission": permission
+                    }
+                )
+            except User.DoesNotExist:
+                continue
+
+        return Response(
+            {
+                "status" :True,
+                "data" : {
+                    "set_id": set.id,
+                    "shared_user_ids": shared_users,
+                },
+                "message": "Set shared successfully!",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+    @extend_schema(**unshare_set_document)
+    @action(detail=True, methods=["delete"], url_path="share/(?P<user_id>[^/.]+)")
+    def un_share(self, request, pk=None, user_id=None):
+        pk , error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        set, error_response = self.get_set(pk=pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            share = SetShare.objects.get(set=set, user_id=user_id)
+            share.delete()
+
+        except SetShare.DoesNotExist:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Shared does not exist! "
+                 },
+                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(
+            {
+                "status": True,
+                "message": "Unshare successfully!"
+            },
+            status=status.HTTP_200_OK,
+        )
+
 
 
 

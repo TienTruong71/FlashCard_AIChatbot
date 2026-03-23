@@ -5,6 +5,9 @@ from core.serializers.set_serializers import (
     CreateSetSerializer,
     UpdateSetSerializer,
 )
+from core.serializers.set_share_serializers import(
+    ShareSetSerializer
+)
 
 list_set_document = {
     "summary": "Get list of set",
@@ -89,6 +92,43 @@ delete_set_document = {
     "responses": {
         200: {"status": True, "message": "set deleted successfully!"},
         400: {"message": "Invalid ID. ID must be an integer!"},
+        404: {"message": "set does not exist!"},
+    },
+}
+
+share_set_document = {
+    "summary": "Share set with users",
+    "description": "Share a set with multiple users by their IDs",
+    "parameters": [
+        OpenApiParameter(
+            "id",
+            type=int,
+            location=OpenApiParameter.PATH,
+            description="ID of the set",
+        ),
+    ],
+    "request": ShareSetSerializer,
+    "responses": {
+        200: SetSerializer,
+        400: {"message": "Validation error"},
+        404: {"message": "set does not exist!"},
+    },
+}
+
+unshare_set_document = {
+    "summary": "Cancel sharing set",
+    "description": "Remove a user from shared set.",
+    "parameters": [
+        OpenApiParameter(
+            "id",
+            type=int,
+            location=OpenApiParameter.PATH,
+            description="ID of user",
+        ),
+    ],
+    "responses": {
+        200: SetSerializer,
+        400: {"message": "Validation error"},
         404: {"message": "set does not exist!"},
     },
 }

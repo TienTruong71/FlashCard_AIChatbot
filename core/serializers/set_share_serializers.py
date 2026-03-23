@@ -1,31 +1,30 @@
 from rest_framework import serializers
 from core.models import SetShare
 
-
-class ShareSetSerializer(serializers.ModelSerializer):
-
-    user_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=True
-    )
-
+class ShareItemSerializer(serializers.Serializer):
+    user_ids = serializers.IntegerField()
     permission  = serializers.ChoiceField(
-        choice=["view", "edit"],
-        required=True
-    )
+            choices=SetShare.PERMISSION_CHOICES,
+            required=True
+        )
 
-    class Meta:
-        model = SetShare
-        fields = [
-            "user_ids",
-            "permission",
-        ]
-    
-    def validate_user_ids(self, value):
+
+
+class ShareSetSerializer(serializers.Serializer):
+
+    shares = ShareItemSerializer(many=True)
+
+    def validate_shares(self, value):
         if not value:
-            raise serializers.ValidationError("User_ids cannot be empty!")
+            raise serializers.ValidationError("Share cannot be empty!")
+
+        user_ids = [item["user_id"] for item in value]
+
+        if len(user_ids) != len(set(user_ids)):
+            raise serializers.ValidationError("Duplicate user ids detected!")
+
+        if any(uid <= 0 for uid in user_ids):
+            raise serializers.ValidationError("Invalid user id!")
+
         return value
 
-    def validate_user_ids(self, value):
-        if len(value) != len(set(value)):
-            raise serializers.ValidationError("Duplicate user ids detected! ")
