@@ -115,7 +115,7 @@ class Question(models.Model):
     QUESTION_TYPE = (
         ("single", "Single Choice"),
         ("text", "Text Fill"),
-        ("checkbox", "Text Box"),
+        ("checkbox", "Check Box"),
     )
     set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="questions")
 

@@ -146,6 +146,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
     @extend_schema(**share_set_document)
     @action(detail=True, methods=["post"], url_path="share")
     def share(self, request, pk=None):
+
         pk, error_response = self.get_id(pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
@@ -194,8 +195,17 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
 
 
     @extend_schema(**unshare_set_document)
-    @action(detail=True, methods=["delete"], url_path="share/(?P<user_id>[^/.]+)")
-    def un_share(self, request, pk=None, user_id=None):
+    @action(detail=True, methods=["delete"], url_path="share")
+    def unshare(self, request, pk=None, user_id=None):
+
+        user_id = request.query_params.get("user_id")
+        if not user_id:
+            return Response(
+                {
+                    "status": False,
+                    "message": "user_id is required"
+                }
+            )
         pk , error_response = self.get_id(pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
@@ -204,17 +214,18 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        try:
-            share = SetShare.objects.get(set=set, user_id=user_id)
-            share.delete()
+        deleted, _ = SetShare.objects.filter(
+            set=set,
+            user_id=user_id
+        ).delete()
 
-        except SetShare.DoesNotExist:
+        if not deleted:
             return Response(
                 {
                     "status": False,
-                    "message": "Shared does not exist! "
-                 },
-                 status=status.HTTP_404_NOT_FOUND,
+                    "message": "Share does not exist!",
+                },
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         return Response(
