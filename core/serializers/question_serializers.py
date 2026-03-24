@@ -25,7 +25,7 @@ class CreateQuestionSerializer(serializers.ModelSerializer):
 
     title = serializers.CharField(
         required=True,
-        error_message={
+        error_messages={
             "required" :"Please enter title!"
         },
     )
@@ -36,7 +36,7 @@ class CreateQuestionSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = Question,
+        model = Question
         fields = [
             "title",
             "type",
@@ -54,11 +54,11 @@ class CreateQuestionSerializer(serializers.ModelSerializer):
 
 
 class UpdateQuestionSerializer(serializers.ModelSerializer):
-    answer = AnswerSerializer(many=True, )
+    answers = AnswerSerializer(many=True, )
 
-    title = serializers.CharFields(
+    title = serializers.CharField(
         required=True,
-        error_message={
+        error_messages={
             "required": "Please enter title!"
         },
     )

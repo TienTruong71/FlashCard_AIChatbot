@@ -9,7 +9,6 @@ class ShareItemSerializer(serializers.Serializer):
         )
 
 
-
 class ShareSetSerializer(serializers.Serializer):
 
     shares = ShareItemSerializer(many=True)
