@@ -33,20 +33,9 @@ class _BaseQuestionViewSet:
             }
         return int(pk), None
 
-
-    def get_set(self, set_id):
+    def get_question(self, pk):
         try:
-            set = Set.objects.get(id=set_id)
-            return set, None
-        except Set.DoesNotExist:
-            return None, {
-                "status": False,
-                "message": "Set does not exist!"
-                }
-
-    def get_question(self, set_id, question_id):
-        try:
-            return Question.objects.get(id=question_id, set_id=set_id), None
+            return Question.objects.get(id=pk), None
         except Question.DoesNotExist:
             return None,{
                 "status" : False,
@@ -57,16 +46,10 @@ class _BaseQuestionViewSet:
 class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
 
     @extend_schema(**list_question_document)
-    def list(self, request, set_id=None):
-        set, error_response = self.get_set(set_id)
-        if error_response:
-            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
-
+    def list(self, request):
         filter_params = request.GET.dict()
 
-        queryset = Question.objects.filter(
-            set=set
-        ). prefetch_related("answers").order_by("created_at")
+        queryset = Question.objects.all(). prefetch_related("answers").order_by("created_at")
 
         questions = QuestionFilter(filter_params, queryset=queryset)
 
@@ -76,11 +59,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(**create_question_document)
-    def create(self, request, set_id=None):
-        set, error_response = self.get_set(set_id)
-        if error_response:
-            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
-
+    def create(self, request):
         serializer = CreateQuestionSerializer(data=request.data)
         if serializer.is_valid():
             question = serializer.save(set=set)
@@ -88,7 +67,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
                 {
                     "status" : True,
                     "data": QuestionSerializer(question).data,
-                    "message":"Question created"
+                    "message":"Question created!"
                 },
                 status=status.HTTP_201_CREATED,
             )
@@ -97,8 +76,12 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
 
 
     @extend_schema(**update_question_document)
-    def update(self, request, set_id=None, pk=None):
-        question, error_response = self.get_question(set_id, pk)
+    def update(self, request, pk=None):
+        pk, error_response =self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        question, error_response = self.get_question(pk=pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
@@ -119,8 +102,12 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         return global_response_errors(serializer.errors)
 
     @extend_schema(**retrieve_question_document)
-    def retrieve(self, request, set_id=None, pk=None):
-        question, error_response = self.get_question(set_id, pk)
+    def retrieve(self, request,pk=None):
+        pk, error_response =self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        question, error_response = self.get_question(pk=pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
@@ -134,8 +121,12 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         )
 
     @extend_schema(**delete_question_document)
-    def destroy(self, request, set_id=None, pk=None):
-        question, error_response = self.get_question(set_id, pk)
+    def destroy(self, request, pk=None):
+        pk, error_response =self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        question, error_response = self.get_question(pk=pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
@@ -145,7 +136,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
                 "status":True,
                 "message": "Question deleted successfully!"
             },
-            status=status.HTTP_204_NO_CONTENT
+            status=status.HTTP_200_OK
         )
 
 

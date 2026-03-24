@@ -36,3 +36,11 @@ class QuestionFilter(filters.FilterSet):
         return queryset.filter(
             Q(title__icontains=value)
         )
+
+class QuizFilter(filters.FilterSet):
+    q = filters.CharFilter(method="filter_by_q", label="Search Set")
+
+    def filter_by_q(self, queryset, name, value):
+        if value:
+            return queryset.filter(Q(title__icontains=value)).distinct()
+        return queryset

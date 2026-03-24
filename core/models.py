@@ -144,7 +144,7 @@ class Answer(models.Model):
 
     class Meta:
         db_table = "answers"
-
+    
     def __str__(self):
         return f"{self.question} {self.content} {self.is_correct}"
 
@@ -156,7 +156,7 @@ class Quiz(models.Model):
     title = models.CharField(max_length=255)
     question_count = models.IntegerField()
 
-    is_public = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -2,12 +2,12 @@ from django.urls import include, path
 from rest_framework import routers
 
 from .views import (
-    QuestionViewSet,
+    QuizViewSet
 )
 
 
 router = routers.DefaultRouter()
-router.register(r"v1/questions", QuestionViewSet, basename="question")
+router.register(r"v1/quizzes", QuizViewSet, basename="quiz")
 
 urlpatterns = [
     path(r"", include(router.urls)),

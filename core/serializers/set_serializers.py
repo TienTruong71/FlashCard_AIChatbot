@@ -46,7 +46,6 @@ class UpdateSetSerializer(serializers.ModelSerializer):
     title = serializers.CharField(
         required=False,
         error_messages={
-            "invalid": "Enter a valid title!",
             "blank" : "Title cannot be empty!",
         },
     )
@@ -54,7 +53,6 @@ class UpdateSetSerializer(serializers.ModelSerializer):
     description = serializers.CharField(
         required=False,
         error_messages={
-            "invalid": "Enter a valid description!",
             "blank": "description cannot be empty!",
         },
     )
