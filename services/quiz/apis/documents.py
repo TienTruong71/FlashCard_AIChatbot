@@ -6,10 +6,13 @@ from core.serializers.quiz_serializers import (
     UpdateQuizSerializer,
 )
 
+from core.serializers.quiz_share_serializers import(
+    ShareQuizSerializer
+)
 
 list_quiz_document = {
-    "summary": "Get quiz of quiz",
-    "description": "Get quiz of quiz.",
+    "summary": "Get all quizzes",
+    "description": "Get all quizzes.",
     "parameters": [
         OpenApiParameter("page", int, required=False, default=1, description="Page number"),
         OpenApiParameter(
@@ -29,15 +32,6 @@ list_quiz_document = {
     "responses": {200: QuizSerializer(many=True)},
 }
 
-create_quiz_document = {
-    "summary": "Create quiz",
-    "description": "Create a new quiz.",
-    "request": CreateQuizSerializer,
-    "responses": {
-        201: QuizSerializer,
-        400: {"message": "Validation error"},
-    },
-}
 
 update_quiz_document = {
     "summary": "Update quiz",
@@ -108,6 +102,43 @@ duplicate_quiz_document = {
     "responses": {
         201: QuizSerializer,
         400: {"message": "Something went wrong while duplicating quiz"},
+        404: {"message": "quiz does not exist!"},
+    },
+}
+
+share_quiz_document = {
+    "summary": "Share quiz with users",
+    "description": "Share a quiz with multiple users by their IDs",
+    "parameters": [
+        OpenApiParameter(
+            "id",
+            type=int,
+            location=OpenApiParameter.PATH,
+            description="ID of the quiz",
+        ),
+    ],
+    "request": ShareQuizSerializer,
+    "responses": {
+        200: QuizSerializer,
+        400: {"message": "Validation error"},
+        404: {"message": "quiz does not exist!"},
+    },
+}
+
+unshare_quiz_document = {
+    "summary": "Cancel sharing quiz",
+    "description": "Remove a user from shared quiz.",
+    "parameters": [
+        OpenApiParameter(
+            "id",
+            type=int,
+            location=OpenApiParameter.PATH,
+            description="ID of user",
+        ),
+    ],
+    "responses": {
+        200: QuizSerializer,
+        400: {"message": "Validation error"},
         404: {"message": "quiz does not exist!"},
     },
 }

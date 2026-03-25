@@ -9,6 +9,11 @@ from core.serializers.set_share_serializers import(
     ShareSetSerializer
 )
 
+from core.serializers.quiz_serializers import(
+    CreateQuizSerializer,
+    QuizSerializer
+)
+
 list_set_document = {
     "summary": "Get list of set",
     "description": "Get list of set.",
@@ -128,6 +133,21 @@ unshare_set_document = {
     ],
     "responses": {
         200: SetSerializer,
+        400: {"message": "Validation error"},
+        404: {"message": "set does not exist!"},
+    },
+}
+
+create_quiz_document = {
+    "summary": "Create quiz from set",
+    "description": (
+        "Create a new quiz from a set. "
+        "Randomly selects a number of questions from the set based on `question_count`, "
+        "then clones them into the quiz along with their answers."
+    ),
+    "request": CreateQuizSerializer,
+    "responses":{
+        200: QuizSerializer,
         400: {"message": "Validation error"},
         404: {"message": "set does not exist!"},
     },

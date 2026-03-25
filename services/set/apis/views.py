@@ -1,17 +1,24 @@
 from django.contrib.auth import authenticate
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
+from django.db import transaction
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from core.paginators import CustomPaginator
 from core.filters import SetFilter
-from core.models import Set, User, SetShare
+from core.models import Set, User, SetShare, Quiz, QuizQuestion, QuizQuestionAnswer
+import random
 
 from core.serializers.set_serializers import (
     UpdateSetSerializer,
     CreateSetSerializer,
     SetSerializer,
 )
+from core.serializers.quiz_serializers import(
+    CreateQuizSerializer,
+    QuizSerializer
+)
+
 from core.serializers.set_share_serializers import(
     ShareSetSerializer
 )
@@ -25,8 +32,8 @@ from .documents import (
     delete_set_document,
     share_set_document,
     unshare_set_document,
+    create_quiz_document
 )
-
 
 class _BaseSetViewSet:
     def get_id(self, pk):
@@ -204,7 +211,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
                 {
                     "status": False,
                     "message": "user_id is required"
-                }
+                },
             )
         pk , error_response = self.get_id(pk)
         if error_response:
@@ -236,6 +243,73 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             status=status.HTTP_200_OK,
         )
 
+
+    @extend_schema(**create_quiz_document)
+    @action(detail=True, methods=["post"], url_path="quizzes")
+    def create_quiz(self, request, set_id):
+        set, error_response = self.get_set(pk=set_id)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CreateQuizSerializer(data=request.data)
+        if not serializer.is_valid():
+            return global_response_errors(serializer.errors)
+
+        validated_data = serializer.validated_data
+        question_count = validated_data["question_count"]
+
+        questions = list(set.question.all())
+
+        if len(questions) < question_count:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Not enough questions in set!"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        random_questions = random.sample(questions, question_count)
+
+        with transaction.atomic():
+            quiz = Quiz.objects.create(
+                user=request.user,
+                set=set,
+                title=validated_data["title"],
+                question_count=question_count,
+            )
+
+            quiz_answers = []
+
+            for q in random_questions:
+                qq = QuizQuestion.objects.create(
+                    quiz=quiz,
+                    question=q,
+                    title=q.title,
+                    type=q.type
+                )
+
+                answers = q.answers.all()
+                for ans in answers:
+                    quiz_answers.append(
+                        QuizQuestionAnswer(
+                            quiz_question=qq,
+                            content=ans.content,
+                            is_correct=ans.is_correct
+                        )
+                    )
+
+            QuizQuestionAnswer.objects.bulk_create(quiz_answers)
+
+
+        return Response(
+            {
+                "status": True,
+                "data": QuizSerializer(quiz).data,
+                "message": "Quiz created!"
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 

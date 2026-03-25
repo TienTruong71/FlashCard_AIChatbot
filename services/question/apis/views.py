@@ -62,7 +62,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
     def create(self, request):
         serializer = CreateQuestionSerializer(data=request.data)
         if serializer.is_valid():
-            question = serializer.save(set=set)
+            question = serializer.save()
             return Response(
                 {
                     "status" : True,

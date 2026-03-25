@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from core.models import Quiz
-
+from django.db import transaction
+from core.models import Quiz, QuizQuestion, QuizQuestionAnswer
 
 class QuizSerializer(serializers.ModelSerializer):
 
@@ -23,10 +23,20 @@ class CreateQuizSerializer(serializers.ModelSerializer):
         },
     )
 
+    question_count = serializers.IntegerField(
+        required=True,
+        min_value=1,
+        error_messages={
+            "required": "Please enter question count!",
+            "min_value": "Question count must be >=1",
+        }
+    )
+
     class Meta:
         model = Quiz
         fields = [
             "title",
+            "question_count",
         ]
 
 
@@ -43,5 +53,174 @@ class UpdateQuizSerializer(serializers.ModelSerializer):
         fields = [
             "title",
         ]
+
+
+class QuizQuestionAnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizQuestionAnswer
+        fields = [
+            "id",
+            "content",
+            "is_correct",
+        ]
+
+
+class QuizQuestionSerializer(serializers.ModelSerializer):
+    answers = QuizQuestionAnswerSerializer(many=True, read_only=True)
+    class Meta:
+        model = QuizQuestion
+        fields = [
+            "id",
+            "title",
+            "type",
+            "answers",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.type == "text":
+            data.pop("answer", None)
+
+        return data
+
+class CreateQuizQuestionSerializer(serializers.ModelSerializer):
+    answers = QuizQuestionAnswerSerializer(many=True)
+
+    title = serializers.CharField(
+        required=True,
+        error_messages={
+            "required": "please enter title!"
+        },
+    )
+
+    type = serializers.ChoiceField(
+        required=True,
+        choices=QuizQuestion.QUESTION_TYPE
+    )
+
+    class Meta:
+        model = QuizQuestion
+        fields = [
+            "title",
+            "type",
+            "answers"
+        ]
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            answers_data = validated_data.pop("answers")
+            quiz_question = QuizQuestion.objects.create(**validated_data)
+
+            for ans in answers_data:
+                QuizQuestionAnswer.objects.create(quiz_question=quiz_question, **ans)
+
+        return quiz_question
+
+
+
+class UpdateQuizQuestionSerializer(serializers.ModelSerializer):
+    answers = QuizQuestionAnswerSerializer(many=True)
+
+    title = serializers.CharField(
+        required=True,
+        error_messages={
+            "required": "Please enter tilte!"
+        },
+    )
+
+    type = serializers.ChoiceField(
+        required=False,
+        choices=QuizQuestion.QUESTION_TYPE,
+    )
+
+    class Meta:
+        model = QuizQuestion
+        fields =[
+            "title",
+            "type",
+            "answers"
+        ]
+
+    def validate(self, data):
+        question_type = data.get("type", self.instance.type)
+        answers = data.get("answers")
+
+        if question_type == "single":
+            if answers:
+                correct_count = sum(
+                    1 for a in answers if a.get("is_correct")
+                )
+                if correct_count != 1:
+                    raise serializers.ValidationError("Single choice must have exactly 1 correct answer!")
+
+        elif question_type =="checkbox":
+            if answers:
+                correct_count = sum(
+                    1 for a in answers if a.get("is_correct")
+                )
+                if correct_count < 1:
+                    raise serializers.ValidationError("Checkbox must have least 1 correct answer!")
+
+
+        elif question_type == "text":
+            if answers:
+                raise serializers.ValidationError("Text question should not have answer!")
+
+        return data
+
+
+    def update(self, instance, validated_data):
+        answers_data = validated_data.pop("answers", None)
+
+        old_type = instance.type
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if answers_data is not None:
+            new_type = instance.type
+
+            if old_type != new_type:
+                instance.answers.all().delete()
+
+                if new_type != "text":
+                    answers = [
+                        QuizQuestionAnswer(quiz_question=instance, **ans)
+                        for ans in answers_data
+                    ]
+                    QuizQuestionAnswer.objects.bulk_create(answers)
+
+            else:
+                existing_answer = {a.id: a for a in instance.answer.all()}
+                incoming_ids = []
+
+                for ans in answers_data:
+                    ans_id = ans.get("id")
+
+                    if ans_id and ans_id in existing_answer:
+                        answer_obj = existing_answer[ans_id]
+
+                        for attr, value in ans.items():
+                            setattr(answer_obj, attr, value)
+
+                        answer_obj.save()
+                        incoming_ids.append(ans_id)
+
+                    else:
+                        new_answer = QuizQuestionAnswer.objects.create(
+                            quiz_question=instance, **ans
+
+                        )
+                        incoming_ids.append(new_answer.id)
+
+                for ans_id, ans_obj in existing_answer.items():
+                    if ans_id not in incoming_ids:
+                        ans_obj.delete()
+
+        return instance
+
+
+
 
 

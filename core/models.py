@@ -144,7 +144,7 @@ class Answer(models.Model):
 
     class Meta:
         db_table = "answers"
-    
+
     def __str__(self):
         return f"{self.question} {self.content} {self.is_correct}"
 
@@ -189,11 +189,16 @@ class QuizShare(models.Model):
 
 
 class QuizQuestion(models.Model):
+    QUESTION_TYPE = (
+        ("single", "Single Choice"),
+        ("text", "Text Fill"),
+        ("checkbox", "Check Box"),
+    )
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="quiz_questions")
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
 
     title = models.TextField()
-    type = models.CharField(max_length=20)
+    type = models.CharField(max_length=20, choices=QUESTION_TYPE)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

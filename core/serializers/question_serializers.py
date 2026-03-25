@@ -54,7 +54,7 @@ class CreateQuestionSerializer(serializers.ModelSerializer):
 
 
 class UpdateQuestionSerializer(serializers.ModelSerializer):
-    answers = AnswerSerializer(many=True, )
+    answers = AnswerSerializer(many=True)
 
     title = serializers.CharField(
         required=True,
@@ -76,7 +76,7 @@ class UpdateQuestionSerializer(serializers.ModelSerializer):
             "answers"
         ]
 
-    def validate_data(self, data):
+    def validate(self, data):
 
         question_type = data.get("type", self.instance.type)
 
@@ -119,7 +119,7 @@ class UpdateQuestionSerializer(serializers.ModelSerializer):
             new_type = instance.type
 
             if old_type != new_type:
-                instance.answers.all.delete()
+                instance.answers.all().delete()
 
                 if new_type != "text":
                     answers = [
