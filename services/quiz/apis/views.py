@@ -30,6 +30,11 @@ from .documents import (
    duplicate_quiz_document,
    share_quiz_document,
    unshare_quiz_document,
+   list_quiz_question_document,
+   create_quiz_question_document,
+   update_quiz_question_document,
+   retrieve_quiz_question_document,
+   delete_quiz_question_document,
 )
 
 
@@ -287,6 +292,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         )
 
 
+    @extend_schema(**list_quiz_question_document)
     @action(detail=True, methods=["get"], url_path="questions")
     def list_quiz_question(self, request, quiz_id=None):
         quiz, error_response = self.get_quiz(pk=quiz_id)
@@ -307,6 +313,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         return paginator.get_paginated_response(serializer.data)
 
 
+    @extend_schema(**create_quiz_question_document)
     @action(detail=True, methods=["post"], url_path="questions")
     def create_quiz_question(self, request, quiz_id=None):
         quiz, error_response = self.get_quiz(pk=quiz_id)
@@ -327,6 +334,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         return global_response_errors(serializer.errors)
 
 
+    @extend_schema(**update_quiz_question_document)
     @action(detail=True, methods=["put"], url_path="questions")
     def update_quiz_question(self, request, quiz_id=None, pk=None):
         pk, error_response = self.get_id(pk)
@@ -354,6 +362,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         return global_response_errors(serializer.errors)
 
 
+    @extend_schema(**retrieve_quiz_question_document)
     @action(detail=True, methods=["get"], url_path="questions")
     def retrieve_quiz_question(self, request, quiz_id=None, pk=None):
         pk, error_response = self.get_id(pk)
@@ -376,6 +385,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         )
 
 
+    @extend_schema(**delete_quiz_question_document)
     @action(detail=True, methods=["delete"], url_path="questions")
     def destroy_quiz_question(self, request, quiz_id=None, pk=None):
         pk, error_response = self.get_id(pk)
