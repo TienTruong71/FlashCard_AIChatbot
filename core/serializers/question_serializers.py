@@ -13,12 +13,6 @@ class QuestionSerializer(serializers.ModelSerializer):
             "answers",
         ]
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if instance.type == "text":
-            data.pop("answers", None)
-
-        return data
 
 class CreateQuestionSerializer(serializers.ModelSerializer):
     answers = AnswerSerializer(many=True)
@@ -44,7 +38,7 @@ class CreateQuestionSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        answers_data = validated_data.pop("answers")
+        answers_data = validated_data.pop("answers", [])
         question = Question.objects.create(**validated_data)
 
         for ans in answers_data:
@@ -77,30 +71,42 @@ class UpdateQuestionSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-
         question_type = data.get("type", self.instance.type)
 
-        answers = data.get("answers")
+        answers = data.get("answers", [])
 
         if question_type == "single":
             if answers:
-                correct_count = sum(
-                    1 for a in answers if a.get("is_correct")
-                )
+                correct_count = sum(1 for a in answers if a.get("is_correct"))
+
+                if len(answers) < 2:
+                    raise serializers.ValidationError("Single choice must have at least 2 answers!")
+
                 if correct_count != 1:
                     raise serializers.ValidationError("Single choice must have exactly 1 correct answer!")
 
+
         elif question_type == "checkbox":
             if answers:
-                correct_count = sum(
-                    1 for a in answers if a.get("is_correct")
-                )
+                correct_count = sum(1 for a in answers if a.get("is_correct"))
+
+                if len(answers) < 2:
+                    raise serializers.ValidationError("Check box must have at least 2 answer!")
+
                 if correct_count < 1:
-                    raise serializers.ValidationError("Check box must have least 1 correct answer!")
+                    raise serializers.ValidationError("Check box must have at least 1 correct answer!")
+
 
         elif question_type == "text":
             if answers:
-                raise serializers.ValidationError("Text question should not have answers !")
+                correct_count = sum(1 for a in answers if a.get("is_correct"))
+
+                if len(answers) < 1:
+                    raise serializers.ValidationError("Text question must have at least 1 answer!")
+
+                if correct_count < 1:
+                    raise serializers.ValidationError("Text question must have at least 1 correct answer!")
+
 
         return data
 
@@ -121,12 +127,11 @@ class UpdateQuestionSerializer(serializers.ModelSerializer):
             if old_type != new_type:
                 instance.answers.all().delete()
 
-                if new_type != "text":
-                    answers = [
-                        Answer(question=instance, **ans)
-                        for ans in answers_data
-                    ]
-                    Answer.objects.bulk_create(answers)
+                answers = [
+                    Answer(question=instance, **ans)
+                    for ans in answers_data
+                ]
+                Answer.objects.bulk_create(answers)
 
             else:
                 existing_answer = {a.id: a for a in instance.answers.all()}

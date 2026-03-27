@@ -45,6 +45,7 @@ class _BaseQuestionViewSet:
 
 class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
 
+
     @extend_schema(**list_question_document)
     def list(self, request):
         filter_params = request.GET.dict()
@@ -57,6 +58,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         page = paginator.paginate_queryset(questions.qs, request)
         serializer = QuestionSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
 
     @extend_schema(**create_question_document)
     def create(self, request):
@@ -101,6 +103,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
             )
         return global_response_errors(serializer.errors)
 
+
     @extend_schema(**retrieve_question_document)
     def retrieve(self, request,pk=None):
         pk, error_response =self.get_id(pk)
@@ -119,6 +122,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
             },
             status=status.HTTP_200_OK
         )
+
 
     @extend_schema(**delete_question_document)
     def destroy(self, request, pk=None):

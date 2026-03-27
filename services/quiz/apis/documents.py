@@ -7,6 +7,10 @@ from core.serializers.quiz_serializers import (
     CreateQuizQuestionSerializer,
     UpdateQuizQuestionSerializer
 )
+from core.serializers.test_serializers import(
+    TestSerializer,
+    CreateTestSerializer
+)
 
 from core.serializers.quiz_share_serializers import(
     ShareQuizSerializer
@@ -237,3 +241,29 @@ delete_quiz_question_document = {
         404: {"message": "quiz question does not exist!"},
     },
 }
+
+
+list_test_of_quiz_document = {
+    "summary": "Get all test of quiz",
+    "description": "Get all test of quiz.",
+    "parameters": [
+        OpenApiParameter("page", int, required=False, default=1, description="Page number"),
+        OpenApiParameter(
+            "page_size",
+            int,
+            required=False,
+            default=10,
+            description="Number of items per page",
+        ),
+        OpenApiParameter(
+            "q",
+            str,
+            required=False,
+            description="Search",
+        ),
+    ],
+    "responses": {200: TestSerializer(many=True)},
+}
+
+
+

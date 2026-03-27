@@ -231,16 +231,17 @@ class Test(models.Model):
         ("in_progress", "In Progress"),
         ("submitted", "Submitted"),
         ("cancelled", "Cancelled"),
+        ("pending", "Pending"),
     )
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="tests")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     score = models.FloatField(default=0)
 
-    time_spent = models.IntegerField(default=0)
+    time_spent = models.IntegerField(default=0, help_text="seconds")
 
-    started_at = models.DateTimeField()
+    started_at = models.DateTimeField(null=True, blank=True)
     last_answered_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
 
@@ -256,10 +257,15 @@ class TestAnswer(models.Model):
     quiz_question = models.ForeignKey(QuizQuestion, on_delete=models.CASCADE)
     selected_answer = models.ForeignKey(
         QuizQuestionAnswer,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
+
+    selected_answers = models.ManyToManyField(QuizQuestionAnswer, blank=True)
+
+
+    text_answer = models.TextField(null=True, blank=True)
 
     is_correct = models.BooleanField(default=False)
     time_spent = models.IntegerField(default=0)

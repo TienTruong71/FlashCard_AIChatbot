@@ -4,8 +4,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from core.paginators import CustomPaginator
-from core.filters import QuizFilter, QuizQuestionFilter
-from core.models import Quiz, QuizQuestion, QuizQuestionAnswer, User, QuizShare
+from core.filters import QuizFilter, QuizQuestionFilter, TestFilter
+from core.models import Quiz, QuizQuestion, QuizQuestionAnswer, User, QuizShare, Test
 from django.db import transaction
 from core.serializers.quiz_serializers import (
     QuizSerializer,
@@ -14,7 +14,11 @@ from core.serializers.quiz_serializers import (
     QuizQuestionSerializer,
     UpdateQuizQuestionSerializer
 )
-
+from core.serializers.test_serializers import(
+    TestSerializer,
+    AnswerTestSerializer,
+    CreateTestSerializer
+)
 
 from core.serializers.quiz_share_serializers import(
     ShareQuizSerializer
@@ -35,6 +39,7 @@ from .documents import (
    update_quiz_question_document,
    retrieve_quiz_question_document,
    delete_quiz_question_document,
+   list_test_of_quiz_document,
 )
 
 
@@ -405,9 +410,25 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         )
 
 
+    @extend_schema(**list_test_of_quiz_document)
+    @action(detail=True, methods=["get"], url_path="tests")
+    def list_test(self, request, pk=None):
+        quiz_id = pk
+        quiz, error_response = self.get_quiz(pk=quiz_id)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
+        filter_params = request.GET.dict()
+        queryset = Test.objects.filter(quiz=quiz).select_related("user")\
+            .prefetch_related("answers").order_by("id")
 
+        tests = TestFilter(filter_params, queryset=queryset)
 
+        paginator = CustomPaginator()
+        page = paginator.paginate_queryset(tests.qs, request)
+        serializer = TestSerializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
 
 
 

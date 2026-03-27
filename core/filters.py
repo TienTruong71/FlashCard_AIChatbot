@@ -61,3 +61,11 @@ class QuizFilter(filters.FilterSet):
         if value:
             return queryset.filter(Q(title__icontains=value)).distinct()
         return queryset
+
+class TestFilter(filters.FilterSet):
+    q = filters.CharFilter(method="filter_by_q", label="Search Set")
+
+    def filter_by_q(self, queryset, name, value):
+        if value:
+            return queryset.filter(Q(user_icontains=value)| Q(score__icontains=value) | Q(status__icontains=value)).distinct()
+        return queryset
