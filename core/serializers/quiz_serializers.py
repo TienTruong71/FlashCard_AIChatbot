@@ -2,6 +2,30 @@ from rest_framework import serializers
 from django.db import transaction
 from core.models import Quiz, QuizQuestion, QuizQuestionAnswer
 
+
+class QuizQuestionAnswerSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = QuizQuestionAnswer
+        fields = [
+            "id",
+            "content",
+            "is_correct",
+        ]
+
+
+class QuizQuestionSerializer(serializers.ModelSerializer):
+    answers = QuizQuestionAnswerSerializer(many=True, read_only=True)
+    class Meta:
+        model = QuizQuestion
+        fields = [
+            "id",
+            "title",
+            "type",
+            "answers",
+        ]
+
 class QuizSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -14,6 +38,23 @@ class QuizSerializer(serializers.ModelSerializer):
             "is_published",
             "created_at",
         ]
+
+
+class QuizDetailSerializer(serializers.ModelSerializer):
+
+    questions = QuizQuestionSerializer(many=True, source="quiz_questions")
+    class Meta:
+        model = Quiz
+        fields = [
+            "id",
+            "title",
+            "set",
+            "question_count",
+            "questions",
+            "is_published",
+            "created_at",
+        ]
+
 
 class CreateQuizSerializer(serializers.ModelSerializer):
     title = serializers.CharField(
@@ -55,28 +96,52 @@ class UpdateQuizSerializer(serializers.ModelSerializer):
         ]
 
 
-class QuizQuestionAnswerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuizQuestionAnswer
-        fields = [
-            "id",
-            "content",
-            "is_correct",
-        ]
+class QuizQuestionValidationMixin:
+    def validate_question_data(self, data):
+
+        instance = getattr(self, "instance", None)
+
+        question_type = data.get("type")
+        if not question_type and instance:
+            question_type = instance.type
+
+        answers = data.get("answers", [])
+
+        if question_type == "single":
+            if answers:
+                correct_count = sum(1 for a in answers if a.get("is_correct"))
+
+                if len(answers) < 2:
+                    raise serializers.ValidationError("Single choice must have at least 2 answers!")
+
+                if correct_count != 1:
+                    raise serializers.ValidationError("Single choice must have exactly 1 correct answer!")
 
 
-class QuizQuestionSerializer(serializers.ModelSerializer):
-    answers = QuizQuestionAnswerSerializer(many=True, read_only=True)
-    class Meta:
-        model = QuizQuestion
-        fields = [
-            "id",
-            "title",
-            "type",
-            "answers",
-        ]
+        elif question_type == "checkbox":
+            if answers:
+                correct_count = sum(1 for a in answers if a.get("is_correct"))
 
-class CreateQuizQuestionSerializer(serializers.ModelSerializer):
+                if len(answers) < 2:
+                    raise serializers.ValidationError("Check box must have at least 2 answer!")
+
+                if correct_count < 1:
+                    raise serializers.ValidationError("Check box must have at least 1 correct answer!")
+
+
+        elif question_type == "text":
+            if answers:
+                correct_count = sum(1 for a in answers if a.get("is_correct"))
+
+                if len(answers) != 1:
+                    raise serializers.ValidationError("Text question must have exactly 1 answer!")
+
+                if correct_count != 1:
+                    raise serializers.ValidationError("Text question must have exactly 1 correct answer!")
+
+        return data
+
+class CreateQuizQuestionSerializer(QuizQuestionValidationMixin,serializers.ModelSerializer):
     answers = QuizQuestionAnswerSerializer(many=True)
 
     title = serializers.CharField(
@@ -99,6 +164,9 @@ class CreateQuizQuestionSerializer(serializers.ModelSerializer):
             "answers"
         ]
 
+    def validate(self, data):
+        return self.validate_question_data(data)
+
     def create(self, validated_data):
         with transaction.atomic():
             answers_data = validated_data.pop("answers")
@@ -110,8 +178,7 @@ class CreateQuizQuestionSerializer(serializers.ModelSerializer):
         return quiz_question
 
 
-
-class UpdateQuizQuestionSerializer(serializers.ModelSerializer):
+class UpdateQuizQuestionSerializer(QuizQuestionValidationMixin , serializers.ModelSerializer):
     answers = QuizQuestionAnswerSerializer(many=True)
 
     title = serializers.CharField(
@@ -135,92 +202,60 @@ class UpdateQuizQuestionSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        question_type = data.get("type", self.instance.type)
-
-        answers = data.get("answers")
-
-        if question_type == "single":
-            if answers:
-                correct_count = sum(1 for a in answers if a.get("is_correct"))
-
-                if len(answers) < 2:
-                    raise serializers.validationError("Single choice must have at 2 answers!")
-
-                if correct_count != 1:
-                    raise serializers.ValidationError("Single choice must have exactly 1 correct answer!")
-
-        elif question_type =="checkbox":
-            if answers:
-                correct_count = sum(1 for a in answers if a.get("is_correct"))
-
-                if len(answers) < 2:
-                    raise serializers.ValidationError("Checkbox must have at least 2 answers!")
-
-                if correct_count < 1:
-                    raise serializers.ValidationError("Checkbox must have least 1 correct answer!")
-
-
-        elif question_type == "text":
-            if answers:
-                correct_count = sum(1 for a in answers if a.get("is_correct"))
-
-                if len(answers) < 1:
-                    raise serializers.ValidationError("Text question must have at least 1 answer!")
-
-                if correct_count < 1:
-                    raise serializers.ValidationError("Text question must have at least 1 correct answer!")
-
-
-        return data
+        return self.validate_question_data(data)
 
 
     def update(self, instance, validated_data):
-        answers_data = validated_data.pop("answers", None)
+        with transaction.atomic():
+            answers_data = validated_data.pop("answers", None)
 
-        old_type = instance.type
+            old_type = instance.type
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        if answers_data is not None:
-            new_type = instance.type
+            if answers_data is not None:
+                new_type = instance.type
 
-            if old_type != new_type:
-                instance.answers.all().delete()
+                if old_type != new_type:
+                    instance.answers.all().delete()
 
-                answers = [
-                    QuizQuestionAnswer(quiz_question=instance, **ans)
-                    for ans in answers_data
-                ]
-                QuizQuestionAnswer.objects.bulk_create(answers)
+                    answers = [
+                        QuizQuestionAnswer(quiz_question=instance, **{k:v for k,v in ans.items() if k != 'id'})
+                        for ans in answers_data
+                    ]
+                    QuizQuestionAnswer.objects.bulk_create(answers)
 
-            else:
-                existing_answer = {a.id: a for a in instance.answer.all()}
-                incoming_ids = []
+                else:
+                    existing_answer = {a.id: a for a in instance.answers.all()}
+                    incoming_ids = []
 
-                for ans in answers_data:
-                    ans_id = ans.get("id")
+                    for ans in answers_data:
+                        ans_id = ans.get("id")
 
-                    if ans_id and ans_id in existing_answer:
-                        answer_obj = existing_answer[ans_id]
+                        if ans_id and ans_id in existing_answer:
+                            answer_obj = existing_answer[ans_id]
 
-                        for attr, value in ans.items():
-                            setattr(answer_obj, attr, value)
+                            ans.pop("id", None)
 
-                        answer_obj.save()
-                        incoming_ids.append(ans_id)
+                            for attr, value in ans.items():
+                                setattr(answer_obj, attr, value)
 
-                    else:
-                        new_answer = QuizQuestionAnswer.objects.create(
-                            quiz_question=instance, **ans
+                            answer_obj.save()
+                            incoming_ids.append(ans_id)
 
-                        )
-                        incoming_ids.append(new_answer.id)
+                        else:
+                            ans.pop("id", None)
+                            new_answer = QuizQuestionAnswer.objects.create(
+                                quiz_question=instance, **ans
 
-                for ans_id, ans_obj in existing_answer.items():
-                    if ans_id not in incoming_ids:
-                        ans_obj.delete()
+                            )
+                            incoming_ids.append(new_answer.id)
+
+                    for ans_id, ans_obj in existing_answer.items():
+                        if ans_id not in incoming_ids:
+                            ans_obj.delete()
 
         return instance
 

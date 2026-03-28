@@ -41,7 +41,7 @@ create_test_document = {
     ),
     "request": CreateTestSerializer,
     "responses":{
-        200: TestSerializer,
+        200: TestSerializer(),
         400: {"message": "Validation error"},
     },
 }
@@ -59,11 +59,7 @@ start_test_document = {
         ),
     ],
     "responses": {
-        200: {
-            "started_at": "datetime",
-            "current_question": QuizQuestionSerializer,
-            "remaining_time": "integer"
-        },
+        200:  QuizQuestionSerializer(),
         404: {"message": "Test does not exist!"}
     },
 }

@@ -26,7 +26,7 @@ class CreateTestSerializer(serializers.Serializer):
     def validate(self, data):
         user = self.context["user"].user
         quiz_id = data["quiz"]
-
+    
         try:
             quiz = Quiz.objects.get(id=quiz_id)
         except Quiz.DoesNotExist:

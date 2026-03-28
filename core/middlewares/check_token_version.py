@@ -12,8 +12,16 @@ class TokenVersionMiddleware(BasePermission):
         current_route = request.resolver_match.route
         if path_is_excluded(current_route, EXCLUDE_AUTH_PATH):
             return True
-        access_token = AccessToken(get_access_token_from_request(request))
-        token = access_token.payload.get("token_version", None)
+        raw_token = get_access_token_from_request(request)
+        if not raw_token:
+            return False
+
+        try:
+            access_token = AccessToken(raw_token)
+            token = access_token.payload.get("token_version", None)
+        except Exception:
+            return False
+
         if request.user and request.user.is_token_version_valid(token):
             return True
         raise AuthenticationFailed("Token is invalid due to version mismatch!")

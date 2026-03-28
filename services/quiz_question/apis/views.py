@@ -5,12 +5,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from core.paginators import CustomPaginator
 from core.filters import QuestionFilter
-from core.models import Question, Set, Answer
+from core.models import QuizQuestion
 
-from core.serializers.question_serializers import (
-    QuestionSerializer,
-    CreateQuestionSerializer,
-    UpdateQuestionSerializer,
+from core.serializers.quiz_serializers import (
+    QuizQuestionSerializer,
+    UpdateQuizQuestionSerializer
 )
 
 from core.utils import global_response_errors
@@ -19,7 +18,6 @@ from .documents import (
    update_question_document,
    retrieve_question_document,
    delete_question_document,
-   list_question_document,
 )
 
 
@@ -34,30 +32,15 @@ class _BaseQuestionViewSet:
 
     def get_question(self, pk):
         try:
-            return Question.objects.get(id=pk), None
-        except Question.DoesNotExist:
+            return QuizQuestion.objects.get(id=pk), None
+        except QuizQuestion.DoesNotExist:
             return None,{
                 "status" : False,
-                "message": "Question does not exist!"
+                "message": "Quiz question does not exist!"
             }
 
 
-class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
-
-
-    @extend_schema(**list_question_document)
-    def list(self, request):
-        filter_params = request.GET.dict()
-
-        queryset = Question.objects.all(). prefetch_related("answers").order_by("created_at")
-
-        questions = QuestionFilter(filter_params, queryset=queryset)
-
-        paginator = CustomPaginator()
-        page = paginator.paginate_queryset(questions.qs, request)
-        serializer = QuestionSerializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
-
+class QuizQuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
 
     @extend_schema(**update_question_document)
     def update(self, request, pk=None):
@@ -69,7 +52,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = UpdateQuestionSerializer(
+        serializer = UpdateQuizQuestionSerializer(
             instance=question, data=request.data, partial=True
         )
 
@@ -78,7 +61,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
             return Response(
                 {
                     "status":True,
-                    "data":QuestionSerializer(question).data,
+                    "data":QuizQuestionSerializer(question).data,
                     "message": "Question updated successfully!",
                 },
                 status=status.HTTP_200_OK,
@@ -88,6 +71,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
 
     @extend_schema(**retrieve_question_document)
     def retrieve(self, request,pk=None):
+
         pk, error_response =self.get_id(pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
@@ -96,7 +80,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = QuestionSerializer(question)
+        serializer = QuizQuestionSerializer(question)
         return Response(
             {
                 "status": True,
@@ -120,7 +104,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         return Response(
             {
                 "status":True,
-                "message": "Question deleted successfully!"
+                "message": "Quiz question deleted successfully!"
             },
             status=status.HTTP_200_OK
         )

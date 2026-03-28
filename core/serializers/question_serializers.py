@@ -14,64 +14,14 @@ class QuestionSerializer(serializers.ModelSerializer):
         ]
 
 
-class CreateQuestionSerializer(serializers.ModelSerializer):
-    answers = AnswerSerializer(many=True)
-
-    title = serializers.CharField(
-        required=True,
-        error_messages={
-            "required" :"Please enter title!"
-        },
-    )
-
-    type = serializers.ChoiceField(
-        choices=Question.QUESTION_TYPE,
-        required=True
-    )
-
-    class Meta:
-        model = Question
-        fields = [
-            "title",
-            "type",
-            "answers"
-        ]
-
-    def create(self, validated_data):
-        answers_data = validated_data.pop("answers", [])
-        question = Question.objects.create(**validated_data)
-
-        for ans in answers_data:
-            Answer.objects.create(question=question, **ans)
-
-        return question
-
-
-class UpdateQuestionSerializer(serializers.ModelSerializer):
-    answers = AnswerSerializer(many=True)
-
-    title = serializers.CharField(
-        required=True,
-        error_messages={
-            "required": "Please enter title!"
-        },
-    )
-
-    type = serializers.ChoiceField(
-        choices=Question.QUESTION_TYPE,
-        required=False
-    )
-
-    class Meta:
-        model = Question
-        fields = [
-            "title",
-            "type",
-            "answers"
-        ]
-
-    def validate(self, data):
-        question_type = data.get("type", self.instance.type)
+class QuestionValidationMixin:
+    def validate_question_data(self, data):
+        
+        instance = getattr(self, "instance", None)
+        
+        question_type = data.get("type")
+        if not question_type and instance:
+            question_type = instance.type
 
         answers = data.get("answers", [])
 
@@ -101,14 +51,77 @@ class UpdateQuestionSerializer(serializers.ModelSerializer):
             if answers:
                 correct_count = sum(1 for a in answers if a.get("is_correct"))
 
-                if len(answers) < 1:
-                    raise serializers.ValidationError("Text question must have at least 1 answer!")
+                if len(answers) != 1:
+                    raise serializers.ValidationError("Text question must have exactly 1 answer!")
 
-                if correct_count < 1:
-                    raise serializers.ValidationError("Text question must have at least 1 correct answer!")
-
+                if correct_count != 1:
+                    raise serializers.ValidationError("Text question must have exactly 1 correct answer!")
 
         return data
+
+
+class CreateQuestionSerializer(QuestionValidationMixin, serializers.ModelSerializer):
+    answers = AnswerSerializer(many=True)
+
+    title = serializers.CharField(
+        required=True,
+        error_messages={
+            "required" :"Please enter title!"
+        },
+    )
+
+    type = serializers.ChoiceField(
+        choices=Question.QUESTION_TYPE,
+        required=True
+    )
+
+    class Meta:
+        model = Question
+        fields = [
+            "title",
+            "type",
+            "answers"
+        ]
+
+    def validate(self, data):
+        return self.validate_question_data(data)
+
+        
+    def create(self, validated_data):
+        answers_data = validated_data.pop("answers", [])
+        question = Question.objects.create(**validated_data)
+
+        for ans in answers_data:
+            Answer.objects.create(question=question, **ans)
+
+        return question
+
+
+class UpdateQuestionSerializer(QuestionValidationMixin, serializers.ModelSerializer):
+    answers = AnswerSerializer(many=True)
+
+    title = serializers.CharField(
+        required=True,
+        error_messages={
+            "required": "Please enter title!"
+        },
+    )
+
+    type = serializers.ChoiceField(
+        choices=Question.QUESTION_TYPE,
+        required=False
+    )
+
+    class Meta:
+        model = Question
+        fields = [
+            "title",
+            "type",
+            "answers"
+        ]
+
+    def validate(self, data):
+        return self.validate_question_data(data)
 
 
     def update(self, instance, validated_data):
@@ -142,6 +155,8 @@ class UpdateQuestionSerializer(serializers.ModelSerializer):
 
                     if ans_id and ans_id in existing_answer:
                         answer_obj = existing_answer[ans_id]
+
+                        ans.pop("id", None)
 
                         for attr, value in ans.items():
                             setattr(answer_obj, attr, value)

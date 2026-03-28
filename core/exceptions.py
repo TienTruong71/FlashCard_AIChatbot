@@ -27,8 +27,22 @@ def custom_exception_handler(exc, context):
     }
 
     if response is not None and response.status_code in error_messages:
+        # If the response already has a 'detail' or 'message' from DRF or custom logic,
+        # we can decide whether to use it or our generic one.
+        # Let's preserve the original message if it's not the generic one.
+        original_message = response.data.get("detail") or response.data.get("message")
+        
+        # If original_message is not None and not empty, we can use it, 
+        # or we can stick with our generic one only if the original is too generic.
+        # For debugging, we definitely want the original.
+        message = original_message if original_message else error_messages[response.status_code]["message"]
+
         return Response(
-            error_messages[response.status_code], status=response.status_code
+            {
+                "status": False,
+                "message": message,
+            },
+            status=response.status_code,
         )
 
     return response

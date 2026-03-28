@@ -195,7 +195,7 @@ class QuizQuestion(models.Model):
         ("checkbox", "Check Box"),
     )
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="quiz_questions")
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
 
     title = models.TextField()
     type = models.CharField(max_length=20, choices=QUESTION_TYPE)
@@ -259,10 +259,15 @@ class TestAnswer(models.Model):
         QuizQuestionAnswer,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
+        related_name="single_test_answer"
     )
 
-    selected_answers = models.ManyToManyField(QuizQuestionAnswer, blank=True)
+    selected_answers = models.ManyToManyField(
+        QuizQuestionAnswer,
+        blank=True,
+        related_name="multiple_test_answer"
+    )
 
 
     text_answer = models.TextField(null=True, blank=True)

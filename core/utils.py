@@ -268,22 +268,16 @@ def extract_first_error_message(errors):
     """
     if isinstance(errors, dict):
         for key, value in errors.items():
-            if isinstance(value, dict):
-                result = extract_first_error_message(value)
-                if result:
-                    return result
-            elif isinstance(value, list) and value:
-                if isinstance(value[0], str):
-                    return value[0]
-                else:
-                    result = extract_first_error_message(value[0])
-                    if result:
-                        return result
-    elif isinstance(errors, list) and errors:
-        if isinstance(errors[0], str):
-            return errors[0]
-        else:
-            return extract_first_error_message(errors[0])
+            result = extract_first_error_message(value)
+            if result:
+                return result
+    elif isinstance(errors, list):
+        for item in errors:
+            result = extract_first_error_message(item)
+            if result:
+                return result
+    elif isinstance(errors, str):
+        return errors
     return None
 
 

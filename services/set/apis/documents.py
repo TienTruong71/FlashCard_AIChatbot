@@ -9,6 +9,11 @@ from core.serializers.set_share_serializers import(
     ShareSetSerializer
 )
 
+from core.serializers.question_serializers import(
+    QuestionSerializer,
+    CreateQuestionSerializer,
+)   
+
 from core.serializers.quiz_serializers import(
     CreateQuizSerializer,
     QuizSerializer
@@ -37,8 +42,8 @@ list_set_document = {
 }
 
 create_set_document = {
-    "summary": "Create department",
-    "description": "Create a new department.",
+    "summary": "Create set",
+    "description": "Create a new set.",
     "request": CreateSetSerializer,
     "responses": {
         201: SetSerializer,
@@ -151,4 +156,60 @@ create_quiz_document = {
         400: {"message": "Validation error"},
         404: {"message": "set does not exist!"},
     },
+}
+
+create_question_document = {
+    "summary": "Create question",
+    "description": "Create a new question.",
+    "request": CreateQuestionSerializer,
+    "responses": {
+        201: QuestionSerializer,
+        400: {"message": "Validation error"},
+    },
+}
+
+
+list_question_document = {
+    "summary": "Get list of set",
+    "description": "Get list of set.",
+    "parameters": [
+        OpenApiParameter("page", int, required=False, default=1, description="Page number"),
+        OpenApiParameter(
+            "page_size",
+            int,
+            required=False,
+            default=10,
+            description="Number of items per page",
+        ),
+        OpenApiParameter(
+            "q",
+            str,
+            required=False,
+            description="Search",
+        ),
+    ],
+    "responses": {200: QuestionSerializer(many=True)},
+}
+
+
+list_quiz_document = {
+    "summary": "Get list of set",
+    "description": "Get list of set.",
+    "parameters": [
+        OpenApiParameter("page", int, required=False, default=1, description="Page number"),
+        OpenApiParameter(
+            "page_size",
+            int,
+            required=False,
+            default=10,
+            description="Number of items per page",
+        ),
+        OpenApiParameter(
+            "q",
+            str,
+            required=False,
+            description="Search",
+        ),
+    ],
+    "responses": {200: QuizSerializer(many=True)},
 }

@@ -5,8 +5,8 @@ from django.db import transaction
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from core.paginators import CustomPaginator
-from core.filters import SetFilter
-from core.models import Set, User, SetShare, Quiz, QuizQuestion, QuizQuestionAnswer
+from core.filters import SetFilter, QuestionFilter, QuizFilter
+from core.models import Set, User, SetShare, Quiz, QuizQuestion, QuizQuestionAnswer, Question
 import random
 
 from core.serializers.set_serializers import (
@@ -17,6 +17,11 @@ from core.serializers.set_serializers import (
 from core.serializers.quiz_serializers import(
     CreateQuizSerializer,
     QuizSerializer
+)
+
+from core.serializers.question_serializers import(
+    QuestionSerializer,
+    CreateQuestionSerializer,
 )
 
 from core.serializers.set_share_serializers import(
@@ -32,7 +37,10 @@ from .documents import (
     delete_set_document,
     share_set_document,
     unshare_set_document,
-    create_quiz_document
+    create_quiz_document,
+    create_question_document,
+    list_question_document,
+    list_quiz_document,
 )
 
 class _BaseSetViewSet:
@@ -70,7 +78,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
     def create(self, request):
         serializer = CreateSetSerializer(data=request.data)
         if serializer.is_valid():
-            set = serializer.save()
+            set = serializer.save(user=request.user)
             return Response(
                 {
                     "status" : True,
@@ -172,21 +180,18 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         for item in shares_data:
             user_id = item["user_id"]
             permission = item["permission"]
-            try:
-                user = User.objects.get(id=user_id)
-                SetShare.objects.update_or_create(
-                    set=set,
-                    user=user,
-                    defaults={"permission": permission}
-                )
-                shared_users.append(
-                    {
-                        "user_id" : user_id,
-                        "permission": permission
-                    }
-                )
-            except User.DoesNotExist:
-                continue
+            user = User.objects.get(id=user_id)
+            SetShare.objects.update_or_create(
+                set=set,
+                user=user,
+                defaults={"permission": permission}
+            )
+            shared_users.append(
+                {
+                    "user_id" : user_id,
+                    "permission": permission
+                }
+            )
 
         return Response(
             {
@@ -202,17 +207,27 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
 
 
     @extend_schema(**unshare_set_document)
-    @action(detail=True, methods=["delete"], url_path="share")
+    @action(detail=True, methods=["delete"], url_path="unshare")
     def unshare(self, request, pk=None, user_id=None):
 
-        user_id = request.query_params.get("user_id")
+        user_id = request.query_params.get("user_id") or request.data.get("user_id")
+
         if not user_id:
             return Response(
                 {
                     "status": False,
-                    "message": "user_id is required"
+                    "message": "user_id is required!"
                 },
             )
+
+        if not str(user_id).isdigit():
+             return Response(
+                {
+                    "status": False,
+                    "message": "user_id must be a number!"
+                },
+            )
+
         pk , error_response = self.get_id(pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
@@ -230,7 +245,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             return Response(
                 {
                     "status": False,
-                    "message": "Share does not exist!",
+                    "message": "Share or user_id does not exist!",
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
@@ -244,10 +259,15 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         )
 
 
+
     @extend_schema(**create_quiz_document)
     @action(detail=True, methods=["post"], url_path="quizzes")
-    def create_quiz(self, request, set_id):
-        set, error_response = self.get_set(pk=set_id)
+    def create_quiz(self, request, pk):
+        pk, error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        set_study, error_response = self.get_set(pk=pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
@@ -258,7 +278,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         validated_data = serializer.validated_data
         question_count = validated_data["question_count"]
 
-        questions = list(set.question.all())
+        questions = list(set_study.questions.all())
 
         if len(questions) < question_count:
             return Response(
@@ -274,7 +294,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         with transaction.atomic():
             quiz = Quiz.objects.create(
                 user=request.user,
-                set=set,
+                set=set_study,
                 title=validated_data["title"],
                 question_count=question_count,
             )
@@ -312,5 +332,74 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         )
 
 
+    @extend_schema(**create_question_document)
+    @action(detail=True, methods=["post"], url_path="questions")
+    def create_question(self, request, pk=None):
+
+        pk, error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        set_study, error_response = self.get_set(pk=pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        many = isinstance(request.data, list)
+        serializer = CreateQuestionSerializer(many=many, data=request.data)
+        if serializer.is_valid():
+            with transaction.atomic():
+                questions = serializer.save(set=set_study)
+            return Response(
+                {
+                    "status" : True,
+                    "data": QuestionSerializer(questions, many=many).data,
+                    "message": "Questions created!" if many else "Question created!"
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        return global_response_errors(serializer.errors)
 
 
+    @extend_schema(**list_question_document)
+    @action(detail=True, methods=["get"], url_path="questions")
+    def list_question(self, request, pk=None):
+
+        pk, error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        set_study, error_response = self.get_set(pk=pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        filter_params = request.GET.dict()
+        sets = QuestionFilter(
+            filter_params, queryset=Question.objects.filter(set=set_study).order_by("id")
+        )
+        paginator = CustomPaginator()
+        page = paginator.paginate_queryset(sets.qs, request)
+        serializer = QuestionSerializer(page, many=True)    
+        return paginator.get_paginated_response(serializer.data)
+
+
+    @extend_schema(**list_quiz_document)
+    @action(detail=True, methods=["get"], url_path="list_quizzes")
+    def list_quiz(self, request, pk=None):
+
+        pk, error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        set_study, error_response = self.get_set(pk=pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        filter_params = request.GET.dict()
+        sets = QuizFilter(
+            filter_params, queryset=Quiz.objects.filter(set=set_study).order_by("id")
+        )
+        paginator = CustomPaginator()
+        page = paginator.paginate_queryset(sets.qs, request)
+        serializer = QuizSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)

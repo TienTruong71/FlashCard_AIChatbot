@@ -9,6 +9,30 @@ from core.serializers.user_serializers import (
     UserSerializerWithToken,
 )
 
+
+list_user_document = {
+    "summary": "Get all users",
+    "description": "Get all users.",
+    "parameters": [
+        OpenApiParameter("page", int, required=False, default=1, description="Page number"),
+        OpenApiParameter(
+            "page_size",
+            int,
+            required=False,
+            default=10,
+            description="Number of items per page",
+        ),
+        OpenApiParameter(
+            "q",
+            str,
+            required=False,
+            description="Search",
+        ),
+    ],
+    "responses": {200: UserSerializer(many=True)},
+}
+
+
 register_user_document = {
     "summary": "Create new user.",
     "description": "Receive input information and create a new user. Return a success message upon successful user creation; otherwise, return an error message.",

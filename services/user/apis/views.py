@@ -8,12 +8,15 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from core.jwt import MyTokenObtainPairSerializer
-
+from core.paginators import CustomPaginator
+from core.filters import UserFilter
+from core.models import User
 from core.serializers.user_serializers import (
     RefreshTokenSerializer,
     RegisterUserSerializer,
     UserLoginSerializer,
     UserSerializerWithToken,
+    UserSerializer
 )
 from core.utils import global_response_errors
 
@@ -21,10 +24,24 @@ from .documents import (
     login_user_document,
     refresh_token_document,
     register_user_document,
+    list_user_document,
 )
 
 
 class AuthenViewSet(viewsets.ViewSet):
+
+    @extend_schema(**list_user_document)
+    def list(self, request):
+        filter_params = request.GET.dict()
+        sets = UserFilter(
+            filter_params, queryset=User.objects.all().order_by("id")
+        )
+        paginator = CustomPaginator()
+        page = paginator.paginate_queryset(sets.qs, request)
+        serializer = UserSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+
     @extend_schema(**register_user_document)
     @action(detail=False, methods=["post"], url_path="register")
     def create_user(self, request):

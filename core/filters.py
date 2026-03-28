@@ -69,3 +69,11 @@ class TestFilter(filters.FilterSet):
         if value:
             return queryset.filter(Q(user_icontains=value)| Q(score__icontains=value) | Q(status__icontains=value)).distinct()
         return queryset
+
+class UserFilter(filters.FilterSet):
+    q = filters.CharFilter(method="filter_by_q", label="Search Set")
+
+    def filter_by_q(self, queryset, name, value):
+        if value:
+            return queryset.filter(Q(username_icontains=value)| Q(role__icontains=value) | Q(first_name__icontains=value) | Q(last_name_icontains=value) ).distinct()
+        return queryset
