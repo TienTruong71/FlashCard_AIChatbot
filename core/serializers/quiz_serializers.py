@@ -4,7 +4,7 @@ from core.models import Quiz, QuizQuestion, QuizQuestionAnswer
 
 
 class QuizQuestionAnswerSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(required=False)
+    id = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = QuizQuestionAnswer
@@ -221,10 +221,11 @@ class UpdateQuizQuestionSerializer(QuizQuestionValidationMixin , serializers.Mod
                 if old_type != new_type:
                     instance.answers.all().delete()
 
-                    answers = [
-                        QuizQuestionAnswer(quiz_question=instance, **{k:v for k,v in ans.items() if k != 'id'})
-                        for ans in answers_data
-                    ]
+                    answers = []
+                    for ans in answers_data:
+                        ans.pop("id", None)
+                        answers.append(QuizQuestionAnswer(quiz_question=instance, **ans))
+                    
                     QuizQuestionAnswer.objects.bulk_create(answers)
 
                 else:
@@ -232,12 +233,10 @@ class UpdateQuizQuestionSerializer(QuizQuestionValidationMixin , serializers.Mod
                     incoming_ids = []
 
                     for ans in answers_data:
-                        ans_id = ans.get("id")
+                        ans_id = ans.pop("id", None)
 
                         if ans_id and ans_id in existing_answer:
                             answer_obj = existing_answer[ans_id]
-
-                            ans.pop("id", None)
 
                             for attr, value in ans.items():
                                 setattr(answer_obj, attr, value)
@@ -246,7 +245,6 @@ class UpdateQuizQuestionSerializer(QuizQuestionValidationMixin , serializers.Mod
                             incoming_ids.append(ans_id)
 
                         else:
-                            ans.pop("id", None)
                             new_answer = QuizQuestionAnswer.objects.create(
                                 quiz_question=instance, **ans
 

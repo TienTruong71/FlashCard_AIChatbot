@@ -169,29 +169,6 @@ create_question_document = {
 }
 
 
-list_question_document = {
-    "summary": "Get list of set",
-    "description": "Get list of set.",
-    "parameters": [
-        OpenApiParameter("page", int, required=False, default=1, description="Page number"),
-        OpenApiParameter(
-            "page_size",
-            int,
-            required=False,
-            default=10,
-            description="Number of items per page",
-        ),
-        OpenApiParameter(
-            "q",
-            str,
-            required=False,
-            description="Search",
-        ),
-    ],
-    "responses": {200: QuestionSerializer(many=True)},
-}
-
-
 list_quiz_document = {
     "summary": "Get list of set",
     "description": "Get list of set.",

@@ -140,10 +140,11 @@ class UpdateQuestionSerializer(QuestionValidationMixin, serializers.ModelSeriali
             if old_type != new_type:
                 instance.answers.all().delete()
 
-                answers = [
-                    Answer(question=instance, **ans)
-                    for ans in answers_data
-                ]
+                answers = []
+                for ans in answers_data:
+                    ans.pop("id", None)
+                    answers.append(Answer(question=instance, **ans))
+                
                 Answer.objects.bulk_create(answers)
 
             else:
@@ -151,12 +152,10 @@ class UpdateQuestionSerializer(QuestionValidationMixin, serializers.ModelSeriali
                 incoming_ids = []
 
                 for ans in answers_data:
-                    ans_id = ans.get("id")
+                    ans_id = ans.pop("id", None)
 
                     if ans_id and ans_id in existing_answer:
                         answer_obj = existing_answer[ans_id]
-
-                        ans.pop("id", None)
 
                         for attr, value in ans.items():
                             setattr(answer_obj, attr, value)

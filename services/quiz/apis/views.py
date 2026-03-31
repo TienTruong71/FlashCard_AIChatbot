@@ -35,7 +35,6 @@ from .documents import (
    duplicate_quiz_document,
    share_quiz_document,
    unshare_quiz_document,
-   list_quiz_question_document,
    create_quiz_question_document,
    update_quiz_question_document,
    retrieve_quiz_question_document,
@@ -254,27 +253,14 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
 
 
     @extend_schema(**unshare_quiz_document)
-    @action(detail=True, methods=["delete"], url_path="unshare")
+    @action(detail=True, methods=["delete"], url_path=r"unshare/(?P<user_id>[^/.]+)")
     def unshare(self, request, pk=None, user_id=None):
-        user_id = request.query_params.get("user_id") or request.data.get("user_id")
-
-        if not user_id:
-            return Response(
-                {
-                    "status": False,
-                    "message": "user_id is required"
-                },
-            )
-
-        if not str(user_id).isdigit():
-             return Response(
-                {
-                    "status": False,
-                    "message": "user_id must be a number!"
-                },
-            )
 
         pk, error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+        
+        user_id, error_response = self.get_id(user_id)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
@@ -291,7 +277,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
             return Response(
                 {
                     "status": False,
-                    "message": "Share or user_id does not exist!",
+                    "message": "Set or user_id does not exist!",
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
@@ -303,32 +289,6 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
             },
             status=status.HTTP_200_OK,
         )
-
-
-    @extend_schema(**list_quiz_question_document)
-    @action(detail=True, methods=["get"], url_path="get_questions")
-    def list_quiz_question(self, request, pk=None):
-
-        pk, error_response = self.get_id(pk)
-        if error_response:
-            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
-
-        quiz, error_response = self.get_quiz(pk=pk)
-        if error_response:
-            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
-
-        filter_params = request.GET.dict()
-
-        queryset = QuizQuestion.objects.filter(
-            quiz=quiz
-        ).prefetch_related("answers").order_by("created_at")
-
-        quiz_questions = QuizQuestionFilter(filter_params, queryset=queryset)
-
-        paginator = CustomPaginator()
-        page = paginator.paginate_queryset(quiz_questions.qs, request)
-        serializer = QuizQuestionSerializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
 
 
     @extend_schema(**create_quiz_question_document)
@@ -343,15 +303,14 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        many = isinstance(request.data, list)
-        serializer = CreateQuizQuestionSerializer(data=request.data, many=many)
+        serializer = CreateQuizQuestionSerializer(data=request.data)
         if serializer.is_valid():
             with transaction.atomic():
                 quiz_question = serializer.save(quiz=quiz)
             return Response(
                 {
                     "status": True,
-                    "data": QuizQuestionSerializer(quiz_question, many=many).data,
+                    "data": QuizQuestionSerializer(quiz_question).data,
                     "message": "Question of Quiz created!"
                 },
                 status=status.HTTP_201_CREATED,

@@ -39,7 +39,6 @@ from .documents import (
     unshare_set_document,
     create_quiz_document,
     create_question_document,
-    list_question_document,
     list_quiz_document,
 )
 
@@ -66,7 +65,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
     def list(self, request):
         filter_params = request.GET.dict()
         sets = SetFilter(
-            filter_params, queryset=Set.objects.prefetch_related("questions__answers").order_by("created_at")
+            filter_params, queryset=Set.objects.prefetch_related("questions__answers").order_by("-created_at")
         )
         paginator = CustomPaginator()
         page = paginator.paginate_queryset(sets.qs, request)
@@ -207,28 +206,14 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
 
 
     @extend_schema(**unshare_set_document)
-    @action(detail=True, methods=["delete"], url_path="unshare")
+    @action(detail=True, methods=["delete"], url_path=r"unshare/(?P<user_id>[^/.]+)")
     def unshare(self, request, pk=None, user_id=None):
 
-        user_id = request.query_params.get("user_id") or request.data.get("user_id")
-
-        if not user_id:
-            return Response(
-                {
-                    "status": False,
-                    "message": "user_id is required!"
-                },
-            )
-
-        if not str(user_id).isdigit():
-             return Response(
-                {
-                    "status": False,
-                    "message": "user_id must be a number!"
-                },
-            )
-
         pk , error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        user_id , error_response = self.get_id(user_id)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
@@ -245,7 +230,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             return Response(
                 {
                     "status": False,
-                    "message": "Share or user_id does not exist!",
+                    "message": "Set or user_id does not exist!",
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
@@ -257,7 +242,6 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             },
             status=status.HTTP_200_OK,
         )
-
 
 
     @extend_schema(**create_quiz_document)
@@ -344,43 +328,20 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        many = isinstance(request.data, list)
-        serializer = CreateQuestionSerializer(many=many, data=request.data)
+        serializer = CreateQuestionSerializer(data=request.data)
         if serializer.is_valid():
             with transaction.atomic():
                 questions = serializer.save(set=set_study)
             return Response(
                 {
                     "status" : True,
-                    "data": QuestionSerializer(questions, many=many).data,
-                    "message": "Questions created!" if many else "Question created!"
+                    "data": QuestionSerializer(questions).data,
+                    "message": "Question created!"
                 },
                 status=status.HTTP_201_CREATED,
             )
 
         return global_response_errors(serializer.errors)
-
-
-    @extend_schema(**list_question_document)
-    @action(detail=True, methods=["get"], url_path="questions")
-    def list_question(self, request, pk=None):
-
-        pk, error_response = self.get_id(pk)
-        if error_response:
-            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
-
-        set_study, error_response = self.get_set(pk=pk)
-        if error_response:
-            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
-
-        filter_params = request.GET.dict()
-        sets = QuestionFilter(
-            filter_params, queryset=Question.objects.filter(set=set_study).order_by("id")
-        )
-        paginator = CustomPaginator()
-        page = paginator.paginate_queryset(sets.qs, request)
-        serializer = QuestionSerializer(page, many=True)    
-        return paginator.get_paginated_response(serializer.data)
 
 
     @extend_schema(**list_quiz_document)

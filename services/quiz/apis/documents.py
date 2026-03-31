@@ -150,29 +150,6 @@ unshare_quiz_document = {
 }
 
 
-list_quiz_question_document = {
-    "summary": "Get all questions of quiz",
-    "description": "Get all questions quiz.",
-    "parameters": [
-        OpenApiParameter("page", int, required=False, default=1, description="Page number"),
-        OpenApiParameter(
-            "page_size",
-            int,
-            required=False,
-            default=10,
-            description="Number of items per page",
-        ),
-        OpenApiParameter(
-            "q",
-            str,
-            required=False,
-            description="Search",
-        ),
-    ],
-    "responses": {200: QuizQuestionSerializer(many=True)},
-}
-
-
 create_quiz_question_document = {
     "summary": "Create question for quiz",
     "description": (
