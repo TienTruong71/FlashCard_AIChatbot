@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.db import transaction
 from core.models import Quiz, QuizQuestion, QuizQuestionAnswer
+from core.constant import QuestionTypeEnum
 
 
 class QuizQuestionAnswerSerializer(serializers.ModelSerializer):
@@ -59,8 +60,10 @@ class QuizDetailSerializer(serializers.ModelSerializer):
 class CreateQuizSerializer(serializers.ModelSerializer):
     title = serializers.CharField(
         required=True,
+        max_length=255,
         error_messages={
             "required": "Please enter title!",
+            "max_length": "Title cannot exceed 255 characters!",
         },
     )
 
@@ -73,26 +76,34 @@ class CreateQuizSerializer(serializers.ModelSerializer):
         }
     )
 
+    is_published = serializers.BooleanField(required=False, default=False)
+
     class Meta:
         model = Quiz
         fields = [
             "title",
             "question_count",
+            "is_published",
         ]
 
 
 class UpdateQuizSerializer(serializers.ModelSerializer):
     title = serializers.CharField(
         required=False,
+        max_length=255,
         error_messages={
-            "blank": "Title cannot be empty!"
+            "blank": "Title cannot be empty!",
+            "max_length": "Title cannot exceed 255 characters!",
         },
     )
+    
+    is_published = serializers.BooleanField(required=False)
 
     class Meta:
         model = Quiz
         fields = [
             "title",
+            "is_published",
         ]
 
 
@@ -107,7 +118,7 @@ class QuizQuestionValidationMixin:
 
         answers = data.get("answers", [])
 
-        if question_type == "single":
+        if question_type == QuestionTypeEnum.SINGLE.value:
             if answers:
                 correct_count = sum(1 for a in answers if a.get("is_correct"))
 
@@ -118,7 +129,7 @@ class QuizQuestionValidationMixin:
                     raise serializers.ValidationError("Single choice must have exactly 1 correct answer!")
 
 
-        elif question_type == "checkbox":
+        elif question_type == QuestionTypeEnum.CHECKBOX.value:
             if answers:
                 correct_count = sum(1 for a in answers if a.get("is_correct"))
 
@@ -129,7 +140,7 @@ class QuizQuestionValidationMixin:
                     raise serializers.ValidationError("Check box must have at least 1 correct answer!")
 
 
-        elif question_type == "text":
+        elif question_type == QuestionTypeEnum.TEXT.value:
             if answers:
                 correct_count = sum(1 for a in answers if a.get("is_correct"))
 
@@ -146,8 +157,10 @@ class CreateQuizQuestionSerializer(QuizQuestionValidationMixin,serializers.Model
 
     title = serializers.CharField(
         required=True,
+        max_length=255,
         error_messages={
-            "required": "please enter title!"
+            "required": "please enter title!",
+            "max_length": "Title cannot exceed 255 characters!",
         },
     )
 
@@ -183,8 +196,10 @@ class UpdateQuizQuestionSerializer(QuizQuestionValidationMixin , serializers.Mod
 
     title = serializers.CharField(
         required=True,
+        max_length=255,
         error_messages={
-            "required": "Please enter title!"
+            "required": "Please enter title!",
+            "max_length": "Title cannot exceed 255 characters!",
         },
     )
 
@@ -225,7 +240,7 @@ class UpdateQuizQuestionSerializer(QuizQuestionValidationMixin , serializers.Mod
                     for ans in answers_data:
                         ans.pop("id", None)
                         answers.append(QuizQuestionAnswer(quiz_question=instance, **ans))
-                    
+
                     QuizQuestionAnswer.objects.bulk_create(answers)
 
                 else:

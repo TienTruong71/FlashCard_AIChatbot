@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from core.models import Question, Answer
 from core.serializers.answer_serializers import AnswerSerializer
+from core.constant import QuestionTypeEnum
 
 class QuestionSerializer(serializers.ModelSerializer):
     answers = AnswerSerializer(many=True, read_only=True)
@@ -25,7 +26,7 @@ class QuestionValidationMixin:
 
         answers = data.get("answers", [])
 
-        if question_type == "single":
+        if question_type == QuestionTypeEnum.SINGLE.value:
             if answers:
                 correct_count = sum(1 for a in answers if a.get("is_correct"))
 
@@ -36,7 +37,7 @@ class QuestionValidationMixin:
                     raise serializers.ValidationError("Single choice must have exactly 1 correct answer!")
 
 
-        elif question_type == "checkbox":
+        elif question_type == QuestionTypeEnum.CHECKBOX.value:
             if answers:
                 correct_count = sum(1 for a in answers if a.get("is_correct"))
 
@@ -47,7 +48,7 @@ class QuestionValidationMixin:
                     raise serializers.ValidationError("Check box must have at least 1 correct answer!")
 
 
-        elif question_type == "text":
+        elif question_type == QuestionTypeEnum.TEXT.value:
             if answers:
                 correct_count = sum(1 for a in answers if a.get("is_correct"))
 
@@ -65,8 +66,10 @@ class CreateQuestionSerializer(QuestionValidationMixin, serializers.ModelSeriali
 
     title = serializers.CharField(
         required=True,
+        max_length=255,
         error_messages={
-            "required" :"Please enter title!"
+            "required" :"Please enter title!",
+            "max_length": "Title cannot exceed 255 characters!",
         },
     )
 
@@ -102,8 +105,10 @@ class UpdateQuestionSerializer(QuestionValidationMixin, serializers.ModelSeriali
 
     title = serializers.CharField(
         required=True,
+        max_length=255,
         error_messages={
-            "required": "Please enter title!"
+            "required": "Please enter title!",
+            "max_length": "Title cannot exceed 255 characters!",
         },
     )
 

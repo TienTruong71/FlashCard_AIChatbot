@@ -56,7 +56,7 @@ class _BaseSetViewSet:
             set = Set.objects.get(pk=pk)
             return set, None
         except Set.DoesNotExist:
-            return None, {"status": False, "message": "set does not exist!"}
+            return None, {"status": False, "message": "Set does not exist!"}
 
 
 class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
@@ -281,6 +281,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
                 set=set_study,
                 title=validated_data["title"],
                 question_count=question_count,
+                is_published=validated_data.get("is_published", False),
             )
 
             quiz_answers = []

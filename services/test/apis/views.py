@@ -9,12 +9,14 @@ from core.paginators import CustomPaginator
 from core.filters import TestFilter
 from core.models import Quiz, Test, QuizQuestion, TestAnswer, QuizQuestionAnswer
 import random
+from core.constant import QuestionTypeEnum, TestStatusEnum
 
 
 from core.serializers.test_serializers import(
     TestSerializer,
     CreateTestSerializer,
-    AnswerTestSerializer
+    AnswerTestSerializer,
+    TestDetailResultSerializer,
 )
 
 
@@ -94,16 +96,26 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        if test.status == "submitted":
+        if test.status == TestStatusEnum.SUBMITTED.value:
              return Response(
                 {"status": False, "message": "Test already submitted!"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if test.status != "in_progress":
-            test.status = "in_progress"
-            test.started_at = timezone.now()
+        if test.status != TestStatusEnum.IN_PROGRESS.value or test.status == TestStatusEnum.PENDING.value :
+            test.status = TestStatusEnum.IN_PROGRESS.value
+            if not test.started_at:
+                test.started_at = timezone.now()
+            test.current_session_start = timezone.now()
             test.save()
+        else:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Test is in_progress state!",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         answered_question_ids = test.answers.values_list("quiz_question_id", flat=True)
         next_question = test.quiz.quiz_questions.exclude(id__in=answered_question_ids).order_by("id").first()
@@ -133,11 +145,19 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        if test.status == "in_progress" and test.started_at:
-            test.time_spent += int((timezone.now() - test.started_at).total_seconds())
-            test.started_at = None
-
-        test.status = "canceled"
+        if test.status == TestStatusEnum.IN_PROGRESS.value and test.current_session_start:
+            test.time_spent += int((timezone.now() - test.current_session_start).total_seconds())
+            test.current_session_start = None
+        if test.status == TestStatusEnum.IN_PROGRESS.value:
+            test.status = TestStatusEnum.CANCELLED.value
+        else:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Test is not in in_progress state!",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         test.save()
 
         return Response(
@@ -160,11 +180,19 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        if test.status == "in_progress" and test.started_at:
-            test.time_spent += int((timezone.now() - test.started_at).total_seconds())
-            test.started_at = None
-
-        test.status = "pending"
+        if test.status == TestStatusEnum.IN_PROGRESS.value and test.current_session_start:
+            test.time_spent += int((timezone.now() - test.current_session_start).total_seconds())
+            test.current_session_start = None
+        if test.status == TestStatusEnum.IN_PROGRESS.value:
+            test.status = TestStatusEnum.PENDING.value
+        else:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Test is not in in_progress state!",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         test.save()
 
         return Response(
@@ -187,6 +215,21 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
+        if test.status == TestStatusEnum.IN_PROGRESS.value and test.current_session_start:
+            test.time_spent += int((timezone.now() - test.current_session_start).total_seconds())
+            test.current_session_start = None
+        if test.status == TestStatusEnum.IN_PROGRESS.value:
+            test.status = TestStatusEnum.SUBMITTED.value
+        else:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Test is not in in_progress state!",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        test.save()
+
         quiz_questions = test.quiz.quiz_questions.all().prefetch_related("answers")
 
         test_answers = {a.quiz_question_id: a for a in test.answers.all()}
@@ -200,7 +243,7 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
             if not user_answer:
                 continue
 
-            if q.type == "text":
+            if q.type == QuestionTypeEnum.TEXT.value:
                 correct_answers = q.answers.filter(is_correct=True)
 
                 is_correct = False
@@ -220,7 +263,7 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
                     correct_count += 1
 
 
-            elif q.type == "single":
+            elif q.type == QuestionTypeEnum.SINGLE.value:
                 if (
                     user_answer.selected_answer
                     and user_answer.selected_answer.is_correct
@@ -233,7 +276,7 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
                 user_answer.save()
 
 
-            elif q.type == "checkbox":
+            elif q.type == QuestionTypeEnum.CHECKBOX.value:
                 correct_set = set(q.answers.filter(is_correct=True).values_list("id", flat=True))
 
                 user_set = set(user_answer.selected_answers.values_list("id", flat=True))
@@ -248,12 +291,9 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
 
         score = (correct_count / total * 100) if total else 0
 
-        if test.status == "in_progress" and test.started_at:
-            test.time_spent += int((timezone.now() - test.started_at).total_seconds())
-            test.started_at = None
 
         test.score = score
-        test.status = "submitted"
+        test.status = TestStatusEnum.SUBMITTED.value
         test.submitted_at = timezone.now()
 
         test.save()
@@ -284,20 +324,11 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        answers = test.answers.all()
+        serializer = TestDetailResultSerializer(test)
 
         return Response({
             "status": True,
-            "data": {
-                "score": test.score,
-                "answers": [
-                    {
-                        "question": a.quiz_question_id,
-                        "is_correct": a.is_correct
-                    }
-                    for a in answers
-                ]
-            },
+            "data": serializer.data,
             "message": "Get result successfully!"
             },
             status=status.HTTP_200_OK,
@@ -369,7 +400,7 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
         )
 
 
-        if question.type == "single":
+        if question.type == QuestionTypeEnum.SINGLE.value:
             answer_id = data.get("quiz_question_answer_id")
             if not answer_id:
                 return Response(
@@ -401,7 +432,7 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
             test_answer.selected_answers.clear()
             test_answer.text_answer = None
 
-        elif question.type == "checkbox":
+        elif question.type == QuestionTypeEnum.CHECKBOX.value:
             answer_ids = data.get("answer_ids")
             if answer_ids is None:
                 return Response(
@@ -430,7 +461,7 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
             test_answer.selected_answer = None
             test_answer.text_answer = None
 
-        elif question.type == "text":
+        elif question.type == QuestionTypeEnum.TEXT.value:
             text = data.get("text")
             if text is None:
                 return Response(
@@ -465,12 +496,3 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
             },
             status=status.HTTP_200_OK
         )
-
-
-
-
-
-
-
-
-

@@ -303,6 +303,15 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
+        if quiz.is_published:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Cannot create questions for a published quiz!"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         serializer = CreateQuizQuestionSerializer(data=request.data)
         if serializer.is_valid():
             with transaction.atomic():

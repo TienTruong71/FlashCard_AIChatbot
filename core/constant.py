@@ -34,6 +34,23 @@ permissions_enum_dict = {
 
 PermissionsEnum = Enum("PermissionsEnum", permissions_enum_dict)
 
+class QuestionTypeEnum(Enum):
+    SINGLE = "single"
+    CHECKBOX = "checkbox"
+    TEXT = "text"
+
+class TestStatusEnum(Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    SUBMITTED = "submitted"
+    CANCELLED = "cancelled"
+
+class PermissionEnum(Enum):
+    VIEW = "view"
+    EDIT = "edit"
+
+    
+
 
 UI_PERMISSION_MAPPING = {}
 DEFAULT_PERMISSION_CLASSES = 2

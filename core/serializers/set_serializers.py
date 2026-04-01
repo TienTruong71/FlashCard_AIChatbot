@@ -23,8 +23,10 @@ class CreateSetSerializer(serializers.ModelSerializer):
 
     title = serializers.CharField(
         required=True,
+        max_length=255,
         error_messages={
             "required": "Please enter title!",
+            "max_length": "Title cannot exceed 255 characters!",
         },
     )
 
@@ -45,8 +47,10 @@ class UpdateSetSerializer(serializers.ModelSerializer):
 
     title = serializers.CharField(
         required=False,
+        max_length=255,
         error_messages={
             "blank" : "Title cannot be empty!",
+            "max_length": "Title cannot exceed 255 characters!",
         },
     )
 

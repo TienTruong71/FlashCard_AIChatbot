@@ -6,7 +6,7 @@ from django_extensions.db.models import TimeStampedModel
 from django_softdelete.models import SoftDeleteModel
 from .managers import DeletedUserManager, GlobalUserManager, SoftDeleteUserManager
 
-from core.constant import USER_DEFAULT_SYSTEM, NotificationTypeEnum
+from core.constant import USER_DEFAULT_SYSTEM, NotificationTypeEnum, QuestionTypeEnum, TestStatusEnum, PermissionEnum
 
 class User(AbstractBaseUser, TimeStampedModel, SoftDeleteModel):
     username = models.CharField(unique=True, null=True, max_length=255)
@@ -96,10 +96,7 @@ class Set(models.Model):
         return f"{self.title} {self.description} {self.is_public}"
 
 class SetShare(models.Model):
-    PERMISSION_CHOICES = (
-        ("view", "View"),
-        ("edit", "Edit"),
-    )
+    PERMISSION_CHOICES = tuple((e.value, e.name.title()) for e in PermissionEnum)
     set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="shares")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="shares")
 
@@ -112,11 +109,7 @@ class SetShare(models.Model):
 
 
 class Question(models.Model):
-    QUESTION_TYPE = (
-        ("single", "Single Choice"),
-        ("text", "Text Fill"),
-        ("checkbox", "Check Box"),
-    )
+    QUESTION_TYPE = tuple((e.value, e.name.replace("_", " ").title()) for e in QuestionTypeEnum)
     set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="questions")
 
     title = models.TextField()
@@ -165,14 +158,11 @@ class Quiz(models.Model):
         db_table = "quizzes"
 
     def __str__(self):
-        return f"{self.set} {self.title} {self.question_count} {self.is_public}"
+        return f"{self.set} {self.title} {self.question_count} {self.is_published}"
 
 
 class QuizShare(models.Model):
-    PERMISSION_CHOICES = (
-        ("view", "View"),
-        ("edit", "Edit"),
-    )
+    PERMISSION_CHOICES = tuple((e.value, e.name.title()) for e in PermissionEnum)
 
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="shares")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -189,11 +179,7 @@ class QuizShare(models.Model):
 
 
 class QuizQuestion(models.Model):
-    QUESTION_TYPE = (
-        ("single", "Single Choice"),
-        ("text", "Text Fill"),
-        ("checkbox", "Check Box"),
-    )
+    QUESTION_TYPE = tuple((e.value, e.name.replace("_", " ").title()) for e in QuestionTypeEnum)
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="quiz_questions")
     question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
 
@@ -227,21 +213,17 @@ class QuizQuestionAnswer(models.Model):
         db_table = "quizzes_question_answer"
 
 class Test(models.Model):
-    STATUS_CHOICES = (
-        ("in_progress", "In Progress"),
-        ("submitted", "Submitted"),
-        ("cancelled", "Cancelled"),
-        ("pending", "Pending"),
-    )
+    STATUS_CHOICES = tuple((e.value, e.name.replace("_", " ").title()) for e in TestStatusEnum)
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="tests")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=TestStatusEnum.PENDING.value)
     score = models.FloatField(default=0)
 
     time_spent = models.IntegerField(default=0, help_text="seconds")
 
     started_at = models.DateTimeField(null=True, blank=True)
+    current_session_start = models.DateTimeField(null=True, blank=True)
     last_answered_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
 
@@ -250,6 +232,7 @@ class Test(models.Model):
 
     def __str__ (self):
         return f"{self.status} {self.score} {self.time_spent}"
+
 
 class TestAnswer(models.Model):
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="answers")

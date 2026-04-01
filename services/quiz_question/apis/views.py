@@ -52,6 +52,15 @@ class QuizQuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
+        if question.quiz.is_published:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Cannot update questions of a published quiz!"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         serializer = UpdateQuizQuestionSerializer(
             instance=question, data=request.data, partial=True
         )
@@ -99,6 +108,15 @@ class QuizQuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
         question, error_response = self.get_question(pk=pk)
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        if question.quiz.is_published:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Cannot delete questions of a published quiz!"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         question.delete()
         return Response(
