@@ -75,5 +75,5 @@ class UserFilter(filters.FilterSet):
 
     def filter_by_q(self, queryset, name, value):
         if value:
-            return queryset.filter(Q(username_icontains=value)| Q(role__icontains=value) | Q(first_name__icontains=value) | Q(last_name_icontains=value) ).distinct()
+            return queryset.filter(Q(email__icontains=value)| Q(role__icontains=value) | Q(first_name__icontains=value) | Q(last_name__icontains=value) ).distinct()
         return queryset

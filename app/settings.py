@@ -208,14 +208,15 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
-# EMAIL_HOST = os.environ.get("EMAIL_HOST")
-# EMAIL_PORT = os.environ.get("EMAIL_PORT")
-# EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-# EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-# EMAIL_USE_TLS = False  # True when port is 587
-# EMAIL_USE_SSL = True  # True when port port 465
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+# Port 465 => SSL, Port 587 => TLS
+EMAIL_USE_SSL = EMAIL_PORT == 465
+EMAIL_USE_TLS = EMAIL_PORT == 587
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Task manegement API Documentation",

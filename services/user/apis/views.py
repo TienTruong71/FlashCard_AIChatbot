@@ -69,7 +69,7 @@ class AuthenViewSet(viewsets.ViewSet):
         if serializer.is_valid():
             user = authenticate(
                 request,
-                username=serializer.validated_data["username"].lower(),
+                username=serializer.validated_data["email"].lower(),
                 password=serializer.validated_data["password"],
             )
             if user:
@@ -90,7 +90,7 @@ class AuthenViewSet(viewsets.ViewSet):
                 )
 
             return Response(
-                {"status": False, "message": "Username or password is incorrect!"},
+                {"status": False, "message": "Email or password is incorrect!"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -116,7 +116,6 @@ class AuthenViewSet(viewsets.ViewSet):
 
 
 
-# refresh token view
 class CustomTokenRefreshView(TokenRefreshView):
     @extend_schema(**refresh_token_document)
     def post(self, request, *args, **kwargs):

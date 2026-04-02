@@ -26,6 +26,9 @@ app = Celery(
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
+# Import shared tasks from core
+import core.tasks
+
 
 @app.task(name="send_email_task", bind=True, max_retries=3)
 def send_email_task(self, user_email, otp):

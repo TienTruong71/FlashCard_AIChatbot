@@ -27,12 +27,12 @@ class UserSerializer(serializers.ModelSerializer):
             "blank": "Lastname cannot be empty!",
         },
     )
-    username = serializers.CharField(
+    email = serializers.EmailField(
         required=True,
         error_messages={
-            "required": "Please enter your username address!",
-            "invalid": "Enter a valid username address!",
-            "blank": "Username cannot be empty!",
+            "required": "Please enter your email address!",
+            "invalid": "Enter a valid email address!",
+            "blank": "Email cannot be empty!",
         },
     )
     password = serializers.CharField(
@@ -49,7 +49,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id",
-            "username",
+            "email",
             "password",
             "first_name",
             "last_name",
@@ -87,12 +87,12 @@ class RegisterUserSerializer(serializers.Serializer):
             "blank": "Lastname cannot be empty!",
         },
     )
-    username = serializers.CharField(
+    email = serializers.EmailField(
         required=True,
         error_messages={
-            "required": "Please enter your username address!",
-            "invalid": "Enter a valid username address!",
-            "blank": "Username cannot be empty!",
+            "required": "Please enter your email address!",
+            "invalid": "Enter a valid email address!",
+            "blank": "Email cannot be empty!",
         },
     )
     password = serializers.CharField(
@@ -109,7 +109,7 @@ class RegisterUserSerializer(serializers.Serializer):
         model = User
         fields = [
             "id",
-            "username",
+            "email",
             "password",
             "first_name",
             "last_name",
@@ -134,9 +134,9 @@ class RegisterUserSerializer(serializers.Serializer):
                 )
         return data
 
-    def validate_username(self, value):
-        if User.objects.filter(username=value.lower()).exists():
-            raise serializers.ValidationError("Username already exists!")
+    def validate_email(self, value):
+        if User.objects.filter(email=value.lower()).exists():
+            raise serializers.ValidationError("Email already exists!")
         return value
 
     def validate_password(self, value):
@@ -152,7 +152,7 @@ class RegisterUserSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        validated_data["username"] = validated_data["username"].lower()
+        validated_data["email"] = validated_data["email"].lower()
         user = User(**validated_data)
         user.set_password(validated_data.get("password", "Defaultpassword@123"))
         user.save()
@@ -160,12 +160,12 @@ class RegisterUserSerializer(serializers.Serializer):
 
 
 class UserLoginSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
+    email = serializers.EmailField(
         required=True,
         error_messages={
-            "required": "Please enter username address!",
-            "invalid": "Enter a valid username address!",
-            "blank": "Username cannot be empty!",
+            "required": "Please enter your email address!",
+            "invalid": "Enter a valid email address!",
+            "blank": "Email cannot be empty!",
         },
     )
     password = serializers.CharField(
@@ -178,7 +178,7 @@ class UserLoginSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "password"]
+        fields = ["email", "password"]
         extra_kwargs = {"password": {"write_only": True}}
 
 

@@ -9,7 +9,7 @@ from .managers import DeletedUserManager, GlobalUserManager, SoftDeleteUserManag
 from core.constant import USER_DEFAULT_SYSTEM, NotificationTypeEnum, QuestionTypeEnum, TestStatusEnum, PermissionEnum
 
 class User(AbstractBaseUser, TimeStampedModel, SoftDeleteModel):
-    username = models.CharField(unique=True, null=True, max_length=255)
+    email = models.EmailField(unique=True, null=True, max_length=255)
     first_name = models.CharField(max_length=255, null=True)
     last_name = models.CharField(max_length=255, null=True)
     is_active = models.BooleanField(default=True)
@@ -30,7 +30,7 @@ class User(AbstractBaseUser, TimeStampedModel, SoftDeleteModel):
     global_objects = GlobalUserManager()
     deleted_objects = DeletedUserManager()
 
-    USERNAME_FIELD = "username"
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name", "role", "password"]
 
     token_version = models.UUIDField(default=uuid.uuid4)
@@ -39,7 +39,7 @@ class User(AbstractBaseUser, TimeStampedModel, SoftDeleteModel):
         db_table = "users"
 
     def __str__(self):
-        return f"{self.pk} {self.username}"
+        return f"{self.pk} {self.email}"
 
     @property
     def full_name(self) -> str:

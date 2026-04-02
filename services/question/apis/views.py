@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from core.paginators import CustomPaginator
 from core.filters import QuestionFilter
 from core.models import Question, Set, Answer
+import logging
 
 from core.serializers.question_serializers import (
     QuestionSerializer,
@@ -14,6 +15,7 @@ from core.serializers.question_serializers import (
 )
 
 from core.utils import global_response_errors
+from core.utils.notifications import send_question_update_warning
 
 from .documents import (
    update_question_document,
@@ -75,6 +77,12 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
 
         if serializer.is_valid():
             question = serializer.save()
+            
+            try:
+                send_question_update_warning(question)
+            except Exception as e:
+                logging.getLogger(__name__).error(f"QuestionUpdate Warning trigger failed: {str(e)}")
+
             return Response(
                 {
                     "status":True,

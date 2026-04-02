@@ -83,7 +83,7 @@ class QuizQuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
 
         pk, error_response =self.get_id(pk)
         if error_response:
-            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND) 
 
         question, error_response = self.get_question(pk=pk)
         if error_response:

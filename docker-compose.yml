@@ -6,6 +6,8 @@ services:
       context: ./services/user
       dockerfile: Dockerfile
     command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    env_file:
+      - .env
     volumes:
       - ./app:/usr/src/service/app
       - ./core:/usr/src/service/core
@@ -31,6 +33,8 @@ services:
       context: ./services/question
       dockerfile: Dockerfile
     command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    env_file:
+      - .env
     volumes:
       - ./app:/usr/src/service/app
       - ./core:/usr/src/service/core
@@ -56,6 +60,8 @@ services:
       context: ./services/quiz_question
       dockerfile: Dockerfile
     command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    env_file:
+      - .env
     volumes:
       - ./app:/usr/src/service/app
       - ./core:/usr/src/service/core
@@ -81,6 +87,8 @@ services:
       context: ./services/test
       dockerfile: Dockerfile
     command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    env_file:
+      - .env
     volumes:
       - ./app:/usr/src/service/app
       - ./core:/usr/src/service/core
@@ -106,6 +114,8 @@ services:
       context: ./services/set
       dockerfile: Dockerfile
     command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    env_file:
+      - .env
     volumes:
       - ./app:/usr/src/service/app
       - ./core:/usr/src/service/core
@@ -130,6 +140,8 @@ services:
       context: ./services/quiz
       dockerfile: Dockerfile
     command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    env_file:
+      - .env
     volumes:
       - ./app:/usr/src/service/app
       - ./core:/usr/src/service/core
@@ -154,6 +166,8 @@ services:
       context: ./services/notification
       dockerfile: Dockerfile
     command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    env_file:
+      - .env
     volumes:
       - ./app:/usr/src/service/app
       - ./core:/usr/src/service/core
@@ -204,6 +218,8 @@ services:
       context: ./services/celery
       dockerfile: Dockerfile
     command: celery -A app.celery worker --loglevel=info
+    env_file:
+      - .env
     volumes:
       - ./services/celery/app:/usr/src/service/app
       - ./core:/usr/src/service/core

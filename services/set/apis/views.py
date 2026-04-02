@@ -9,6 +9,11 @@ from core.filters import SetFilter, QuestionFilter, QuizFilter
 from core.models import Set, User, SetShare, Quiz, QuizQuestion, QuizQuestionAnswer, Question
 import random
 
+from django.core.mail import send_mail
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
 from core.serializers.set_serializers import (
     UpdateSetSerializer,
     CreateSetSerializer,
@@ -28,6 +33,7 @@ from core.serializers.set_share_serializers import(
     ShareSetSerializer
 )
 from core.utils import global_response_errors
+from core.utils.notifications import send_share_notification
 
 from .documents import (
     create_set_document,
@@ -103,6 +109,8 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         serializer = UpdateSetSerializer(
             instance=set, data=request.data, partial=True
         )
+
+
         if serializer.is_valid():
             set = serializer.save()
             return Response(
@@ -190,6 +198,13 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
                     "user_id" : user_id,
                     "permission": permission
                 }
+            )
+            
+            send_share_notification(
+                recipient=user,
+                item_title=set.title,
+                item_type="Bộ học phần",
+                permission=permission
             )
 
         return Response(

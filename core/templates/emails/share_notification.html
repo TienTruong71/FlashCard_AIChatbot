@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            background-color: #2F80ED;
+            color: #ffffff;
+            text-align: center;
+            padding: 25px 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 30px;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .content p {
+            margin: 15px 0;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #2F80ED;
+        }
+
+        .footer {
+            background-color: #f9fbfd;
+            text-align: center;
+            padding: 20px;
+            font-size: 13px;
+            color: #999;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Thông báo chia sẻ {{ item_type }}</h1>
+        </div>
+        <div class="content">
+            <p>Xin chào <strong>{{ username }}</strong>,</p>
+            <p>Một {{ item_type_lower }} mới với tên <span class="highlight">"{{ item_title }}"</span> vừa được chia sẻ
+                với bạn.</p>
+            <p>Quyền truy cập của bạn: <span class="highlight">{{ permission }}</span>.</p>
+            <p>Hãy truy cập vào hệ thống để bắt đầu trải nghiệm ngay nhé!</p>
+        </div>
+        <div class="footer">
+            <p>Email này được gửi tự động từ hệ thống.</p>
+            <p>Vui lòng không trả lời email này.</p>
+        </div>
+    </div>
+</body>
+
+</html>

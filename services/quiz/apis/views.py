@@ -7,6 +7,10 @@ from core.paginators import CustomPaginator
 from core.filters import QuizFilter, QuizQuestionFilter, TestFilter
 from core.models import Quiz, QuizQuestion, QuizQuestionAnswer, User, QuizShare, Test
 from django.db import transaction
+from django.core.mail import send_mail
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from core.serializers.quiz_serializers import (
     QuizSerializer,
     UpdateQuizSerializer,
@@ -26,6 +30,7 @@ from core.serializers.quiz_share_serializers import(
 )
 
 from core.utils import global_response_errors
+from core.utils.notifications import send_share_notification
 
 from .documents import (
    list_quiz_document,
@@ -237,6 +242,13 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
                     "user_id": user_id,
                     "permission": permission,
                 }
+            )
+            
+            send_share_notification(
+                recipient=user,
+                item_title=quiz.title,
+                item_type="Quiz",
+                permission=permission
             )
 
         return Response(
