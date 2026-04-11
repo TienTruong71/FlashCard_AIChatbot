@@ -1,7 +1,7 @@
 version: "3.7"
 
 services:
-  user_service:
+  user-service:
     build:
       context: ./services/user
       dockerfile: Dockerfile
@@ -26,9 +26,10 @@ services:
     networks:
       - redis_network
       - dbnetwork
+      - nginx_network
 
 
-  question_service:
+  question-service:
     build:
       context: ./services/question
       dockerfile: Dockerfile
@@ -53,9 +54,10 @@ services:
     networks:
       - redis_network
       - dbnetwork
+      - nginx_network
 
 
-  quiz_question_service:
+  quiz-question-service:
     build:
       context: ./services/quiz_question
       dockerfile: Dockerfile
@@ -80,9 +82,10 @@ services:
     networks:
       - redis_network
       - dbnetwork
+      - nginx_network
 
 
-  test_service:
+  test-service:
     build:
       context: ./services/test
       dockerfile: Dockerfile
@@ -107,9 +110,10 @@ services:
     networks:
       - redis_network
       - dbnetwork
+      - nginx_network
 
 
-  set_service:
+  set-service:
     build:
       context: ./services/set
       dockerfile: Dockerfile
@@ -134,8 +138,9 @@ services:
     networks:
       - redis_network
       - dbnetwork
+      - nginx_network
 
-  quiz_service:
+  quiz-service:
     build:
       context: ./services/quiz
       dockerfile: Dockerfile
@@ -160,8 +165,9 @@ services:
     networks:
       - redis_network
       - dbnetwork
+      - nginx_network
 
-  notification_service:
+  notification-service:
     build:
       context: ./services/notification
       dockerfile: Dockerfile
@@ -184,6 +190,7 @@ services:
     networks:
       - redis_network
       - dbnetwork
+      - nginx_network
 
   apschedule:
     build:
@@ -247,6 +254,7 @@ services:
     networks:
       - redis_network
       - dbnetwork
+      - nginx_network
 
   frontend:
     build:
@@ -265,10 +273,11 @@ services:
     volumes:
       - static_volume:/home/app/web/static
       - media_volume:/home/app/web/media
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     ports:
       - "${FORWARD_PORT}:80"
     depends_on:
-      - user_service
+      - user-service
     networks:
       - nginx_network
 

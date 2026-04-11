@@ -1,4 +1,6 @@
 from django.contrib.auth import authenticate
+from core.mail import MailService
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -18,6 +20,7 @@ from core.serializers.user_serializers import (
     UserSerializerWithToken,
     UserSerializer
 )
+from rest_framework.permissions import AllowAny
 from core.utils import global_response_errors
 
 from .documents import (
@@ -26,6 +29,8 @@ from .documents import (
     register_user_document,
     list_user_document,
 )
+
+
 
 
 class AuthenViewSet(viewsets.ViewSet):
@@ -43,25 +48,112 @@ class AuthenViewSet(viewsets.ViewSet):
 
 
     @extend_schema(**register_user_document)
-    @action(detail=False, methods=["post"], url_path="register")
+    @action(detail=False, methods=["post"], url_path="register", permission_classes=[AllowAny])
     def create_user(self, request):
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
+            MailService.send_verify_otp(user.email, user.otp)
 
             return Response(
                 {
                     "status": True,
-                    "message": "User created successfully!",
+                    "message": "User created successfully! Please check your email for OTP verification.",
                 },
                 status=status.HTTP_201_CREATED,
             )
 
         return global_response_errors(serializer.errors)
 
+    @action(detail=False, methods=["post"], url_path="verify-otp", permission_classes=[AllowAny])
+    def verify_otp(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+
+        if not email or not otp:
+            return Response(
+                {"status": False, "message": "Email and OTP are required!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(email=email.lower())
+        except User.DoesNotExist:
+            return Response(
+                {"status": False, "message": "User not found!"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+
+        if user.is_active:
+             return Response(
+                {"status": True, "message": "Account already verified!"},
+                status=status.HTTP_200_OK,
+            )
+
+        if user.otp != otp:
+            return Response(
+                {"status": False, "message": "Invalid OTP code!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        now = timezone.now()
+        if (now - user.otp_created_at).total_seconds() > 60:
+            return Response(
+                {"status": False, "message": "OTP has expired! Please request a new one."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.is_active = True
+        user.otp = None
+        user.save()
+
+        return Response(
+            {"status": True, "message": "Account verified successfully! You can now login."},
+            status=status.HTTP_200_OK,
+        )
+
+
+    @action(detail=False, methods=["post"], url_path="resend-otp", permission_classes=[AllowAny])
+    def resend_otp(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response(
+                {"status": False, "message": "Email is required!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(email=email.lower())
+        except User.DoesNotExist:
+            return Response(
+                {"status": False, "message": "User not found!"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if user.is_active:
+             return Response(
+                {"status": True, "message": "Account already verified!"},
+                status=status.HTTP_200_OK,
+            )
+
+        import random
+        otp = str(random.randint(100000, 999999))
+        user.otp = otp
+        user.otp_created_at = timezone.now()
+        user.save()
+
+        MailService.send_verify_otp(user.email, user.otp)
+
+        return Response(
+            {"status": True, "message": "New OTP has been sent to your email!"},
+            status=status.HTTP_200_OK,
+        )
+
 
     @extend_schema(**login_user_document)
-    @action(methods=["post"], detail=False, url_path="login")
+    @action(methods=["post"], detail=False, url_path="login", permission_classes=[AllowAny])
     def login_user(self, request):
         serializer = UserLoginSerializer(
             data=request.data, context={"request": request}

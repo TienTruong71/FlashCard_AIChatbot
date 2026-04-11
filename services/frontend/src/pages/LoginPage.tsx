@@ -18,11 +18,7 @@ export const LoginPage = () => {
       message.success('Đăng nhập thành công!')
       navigate('/dashboard')
     } catch (error: any) {
-      if (error.response?.data?.message) {
-        message.error(error.response.data.message)
-      } else {
-        message.error('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.')
-      }
+      message.error(error.errorMessage || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.')
     } finally {
       setLoading(false)
     }
@@ -33,7 +29,7 @@ export const LoginPage = () => {
       <Card
         className="glass-card"
         style={{ width: 400, padding: '20px' }}
-        bordered={false}
+        variant="borderless"
       >
         <div style={{ textAlign: 'center', marginBottom: 30 }}>
           <Title level={2} style={{ color: '#fff', marginBottom: 8 }}>Chào mừng trở lại</Title>
@@ -69,7 +65,7 @@ export const LoginPage = () => {
               Đăng nhập
             </Button>
           </Form.Item>
-          
+
           <div style={{ textAlign: 'center' }}>
             <Text style={{ color: '#aaa' }}>
               Chưa có tài khoản? <Link to="/register" style={{ color: '#722ed1' }}>Đăng ký ngay</Link>

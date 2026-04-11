@@ -1,5 +1,6 @@
 import os
-
+import random
+from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
@@ -70,6 +71,8 @@ class UserSerializer(serializers.ModelSerializer):
                 f"{os.environ.get("BE_DOMAIN")}{representation['avatar']}"
             )
         return representation
+
+
 
 
 class RegisterUserSerializer(serializers.Serializer):
@@ -153,8 +156,14 @@ class RegisterUserSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         validated_data["email"] = validated_data["email"].lower()
+        validated_data["is_active"] = False  
         user = User(**validated_data)
         user.set_password(validated_data.get("password", "Defaultpassword@123"))
+        
+        otp = str(random.randint(100000, 999999))
+        user.otp = otp
+        user.otp_created_at = timezone.now()
+        
         user.save()
         return user
 

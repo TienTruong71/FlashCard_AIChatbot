@@ -18,6 +18,12 @@ export const authApi = {
   register: (payload: RegisterPayload) =>
     axiosInstance.post<ApiResponse<void>>(`${AUTH_BASE}/register/`, payload),
 
+  verifyOtp: (payload: { email: string; otp: string }) =>
+    axiosInstance.post<ApiResponse<void>>(`${AUTH_BASE}/verify-otp/`, payload),
+
+  resendOtp: (email: string) =>
+    axiosInstance.post<ApiResponse<void>>(`${AUTH_BASE}/resend-otp/`, { email }),
+
   logout: (refreshToken: string) =>
     axiosInstance.post<ApiResponse<void>>(`${AUTH_BASE}/logout/`, {
       refresh_token: refreshToken,
@@ -29,10 +35,7 @@ export const authApi = {
       refresh: refreshToken,
     }),
 
-  /**
-   * GET /api/v1/auth/
-   * List all users (admin)
-   */
+
   listUsers: (params?: PaginationParams) =>
     axiosInstance.get<PaginatedResponse<User>>(`${AUTH_BASE}/`, { params }),
 }

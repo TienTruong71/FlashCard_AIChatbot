@@ -25,6 +25,8 @@ class User(AbstractBaseUser, TimeStampedModel, SoftDeleteModel):
         max_length=255,
     )
     status = models.BooleanField(default=True)
+    otp = models.CharField(max_length=6, null=True, blank=True)
+    otp_created_at = models.DateTimeField(null=True, blank=True)
 
     objects = SoftDeleteUserManager()
     global_objects = GlobalUserManager()
