@@ -1,6 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
-// Base URL: routed through Nginx gateway, no CORS issues
 const BASE_URL = '/api'
 
 const axiosInstance = axios.create({
@@ -10,7 +9,7 @@ const axiosInstance = axios.create({
   },
 })
 
-// ─── Request Interceptor: Attach access token ────────────────────────────────
+
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const accessToken = localStorage.getItem('access_token')
@@ -22,7 +21,6 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// ─── Response Interceptor: Handle 401 & auto-refresh token ───────────────────
 let isRefreshing = false
 let failedQueue: Array<{
   resolve: (token: string) => void

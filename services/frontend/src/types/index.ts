@@ -8,10 +8,16 @@ export interface ApiResponse<T> {
 }
 
 export interface PaginatedResponse<T> {
-  count: number
-  next: string | null
-  previous: string | null
-  results: T[]
+  status: boolean
+  data: T[]
+  pagination: {
+    total_items: number
+    page_size: number
+    current_page: number
+    total_pages: number
+    next_page: string | null
+    previous_page: string | null
+  }
 }
 
 // =====================
@@ -139,9 +145,7 @@ export interface ShareQuizPayload {
   shares: { user_id: number; permission: string }[]
 }
 
-// =====================
-// Quiz Questions (relation service)
-// =====================
+
 export interface QuizQuestionItem {
   id: number
   quiz: number
@@ -149,9 +153,7 @@ export interface QuizQuestionItem {
   order?: number
 }
 
-// =====================
-// Test
-// =====================
+
 export interface TestAnswer {
   id: number
   quiz_question: number
@@ -177,9 +179,7 @@ export interface AnswerTestPayload {
   answers: { quiz_question_id: number; answer_id?: number; content?: string }[]
 }
 
-// =====================
-// Notification
-// =====================
+
 export interface Notification {
   id: number
   user: number
@@ -189,9 +189,7 @@ export interface Notification {
   created_at: string
 }
 
-// =====================
-// Pagination params
-// =====================
+
 export interface PaginationParams {
   page?: number
   page_size?: number

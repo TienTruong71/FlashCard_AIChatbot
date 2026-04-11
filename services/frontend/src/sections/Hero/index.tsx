@@ -1,6 +1,7 @@
 import { Button, Row, Col, Typography } from 'antd'
 import { motion } from 'framer-motion'
 import { Rocket, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const { Title, Paragraph } = Typography
 
@@ -60,12 +61,11 @@ export const Hero = () => {
             </Paragraph>
 
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-              <Button type="primary" size="large" style={{ height: '56px', padding: '0 40px', fontSize: '18px' }}>
-                Bắt đầu ngay <ArrowRight size={20} style={{ marginLeft: '8px' }} />
-              </Button>
-              <Button size="large" ghost style={{ height: '56px', padding: '0 40px', fontSize: '18px', borderColor: 'rgba(255, 255, 255, 0.2)' }}>
-                Tìm hiểu thêm
-              </Button>
+              <Link to="/register">
+                <Button type="primary" size="large" style={{ height: '56px', padding: '0 40px', fontSize: '18px' }}>
+                  Bắt đầu ngay <ArrowRight size={20} style={{ marginLeft: '8px' }} />
+                </Button>
+              </Link>
             </div>
           </Col>
         </Row>

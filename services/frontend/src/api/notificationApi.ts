@@ -43,10 +43,7 @@ export const notificationApi = {
   markAllAsRead: () =>
     axiosInstance.post<ApiResponse<void>>(`${NOTIFICATION_BASE}/mark_all_as_read/`),
 
-  /**
-   * GET /api/v1/notifications/unread_notification_count/
-   * Get count of unread notifications for current user
-   */
+
   unreadCount: () =>
     axiosInstance.get<ApiResponse<number>>(`${NOTIFICATION_BASE}/unread_notification_count/`),
 }

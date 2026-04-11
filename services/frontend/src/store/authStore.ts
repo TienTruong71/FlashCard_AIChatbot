@@ -8,7 +8,6 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
 
-  // Actions
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   setUser: (user: UserWithTokens) => void
@@ -51,7 +50,6 @@ export const useAuthStore = create<AuthState>()(
             await authApi.logout(refreshToken)
           }
         } catch (_) {
-          // Ignore logout API errors — always clear local state
         } finally {
           localStorage.removeItem('access_token')
           localStorage.removeItem('refresh_token')

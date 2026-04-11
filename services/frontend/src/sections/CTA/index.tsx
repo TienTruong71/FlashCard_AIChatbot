@@ -1,4 +1,5 @@
 import { Button, Typography } from 'antd'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
 const { Title, Paragraph } = Typography
@@ -25,19 +26,21 @@ export const CTA = () => {
         <Paragraph style={{ color: '#aaa', fontSize: '20px', marginBottom: '40px', maxWidth: '700px', margin: '0 auto 40px' }}>
           Gia nhập cộng đồng hàng ngàn người học thông thái ngay hôm nay và nhận bộ tài liệu độc quyền hoàn toàn miễn phí.
         </Paragraph>
-        <Button 
-          type="primary" 
-          size="large" 
-          style={{ 
-            height: '64px', 
-            padding: '0 60px', 
-            fontSize: '20px',
-            background: '#722ed1',
-            boxShadow: '0 8px 24px rgba(114, 46, 209, 0.4)'
-          }}
-        >
-          Tham gia miễn phí
-        </Button>
+        <Link to="/register">
+          <Button 
+            type="primary" 
+            size="large" 
+            style={{ 
+              height: '64px', 
+              padding: '0 60px', 
+              fontSize: '20px',
+              background: '#722ed1',
+              boxShadow: '0 8px 24px rgba(114, 46, 209, 0.4)'
+            }}
+          >
+            Tham gia miễn phí
+          </Button>
+        </Link>
       </motion.div>
     </section>
   )
