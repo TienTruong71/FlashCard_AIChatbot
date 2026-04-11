@@ -1,6 +1,6 @@
 from django.db.models import Q
 from django_filters import rest_framework as filters
-from core.models import Notification, Question, QuizQuestion
+from core.models import Notification, Question, QuizQuestion, Set, Quiz, Test, User
 
 class NotificationFilter(filters.FilterSet):
     class Meta:
@@ -9,6 +9,7 @@ class NotificationFilter(filters.FilterSet):
         fields = {
             "is_read": ["exact"],
         }
+
 
 class SetFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")
@@ -30,6 +31,10 @@ class SetFilter(filters.FilterSet):
         }
     )
 
+    class Meta:
+        model = Set
+        fields = []
+
     def filter_by_q(self, queryset, name, value):
         if value:
             return queryset.filter(
@@ -37,10 +42,11 @@ class SetFilter(filters.FilterSet):
             ).distinct()
         return queryset
 
+
 class QuestionFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Question")
-    type = filters.CharFilter(field_name="type", lookup_expr="exact")
-    types = filters.BaseInFilter(field_name="type", lookup_expr="in")
+    type = filters.CharFilter(field_name="type", lookup_expr="exact", db_index=True)
+    types = filters.BaseInFilter(field_name="type", lookup_expr="in", db_index=True)
 
     ordering = filters.OrderingFilter(
         fields=(
@@ -60,20 +66,20 @@ class QuestionFilter(filters.FilterSet):
     )
     class Meta:
         model = Question
-        fields = ["q", "type", "types"]
+        fields = ["type", "types"]
 
     def filter_by_q(self, queryset, name, value):
         if not value:
             return queryset
 
         return queryset.filter(
-            Q(title__icontains=value)
-        )
+            Q(title__icontains=value) | Q(type__icontains=value)
+        ).distinct()
 
 class QuizQuestionFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Question")
-    type = filters.CharFilter(field_name="type", lookup_expr="exact")
-    types = filters.BaseInFilter(field_name="type", lookup_expr="in")
+    type = filters.CharFilter(field_name="type", lookup_expr="exact", db_index=True)
+    types = filters.BaseInFilter(field_name="type", lookup_expr="in", db_index=True)
 
     ordering = filters.OrderingFilter(
         fields=(
@@ -93,15 +99,14 @@ class QuizQuestionFilter(filters.FilterSet):
     )
     class Meta:
         model = QuizQuestion
-        fields = ["q", "type", "types"]
+        fields = ["type", "types"]
 
     def filter_by_q(self, queryset, name, value):
-        if not value:
-            return queryset
-
-        return queryset.filter(
-            Q(title__icontains=value)
-        )
+        if value:
+            return queryset.filter(
+                Q(title__icontains=value) | Q(type__icontains=value)
+            ).distinct()
+        return queryset
 
 class QuizFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")
@@ -121,10 +126,14 @@ class QuizFilter(filters.FilterSet):
             "updated_at": "Updated Time",
         }
     ) 
-    
+
+    class Meta:
+        model = Quiz
+        fields = []
+
     def filter_by_q(self, queryset, name, value):
         if value:
-            return queryset.filter(Q(title__icontains=value)).distinct()
+            return queryset.filter(Q(title__icontains=value) | Q(description__icontains=value)).distinct()
         return queryset
 
 class TestFilter(filters.FilterSet):
@@ -148,9 +157,13 @@ class TestFilter(filters.FilterSet):
         }
     ) 
 
+    class Meta:
+        model = Test
+        fields = []
+
     def filter_by_q(self, queryset, name, value):
         if value:
-            return queryset.filter(Q(user_icontains=value)| Q(score__icontains=value) | Q(status__icontains=value)).distinct()
+            return queryset.filter(Q(user__icontains=value)| Q(score__icontains=value) | Q(status__icontains=value)).distinct()
         return queryset
 
 class UserFilter(filters.FilterSet):
@@ -174,7 +187,11 @@ class UserFilter(filters.FilterSet):
             "created_at": "Created Time",
             "updated_at": "Updated Time",
         }
-    ) 
+    )
+
+    class Meta:
+        model = User
+        fields = []
 
     def filter_by_q(self, queryset, name, value):
         if value:
