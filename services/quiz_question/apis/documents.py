@@ -30,7 +30,6 @@ list_question_document = {
 }
 
 
-
 update_question_document = {
     "summary": "Update question",
     "description": "Update question by id (partial update supported).",

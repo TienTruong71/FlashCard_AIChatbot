@@ -76,6 +76,7 @@ class QuestionFilter(filters.FilterSet):
             Q(title__icontains=value) | Q(type__icontains=value)
         ).distinct()
 
+
 class QuizQuestionFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Question")
     type = filters.CharFilter(field_name="type", lookup_expr="exact", db_index=True)
@@ -108,6 +109,7 @@ class QuizQuestionFilter(filters.FilterSet):
             ).distinct()
         return queryset
 
+
 class QuizFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")
     ordering = filters.OrderingFilter(
@@ -135,6 +137,7 @@ class QuizFilter(filters.FilterSet):
         if value:
             return queryset.filter(Q(title__icontains=value) | Q(description__icontains=value)).distinct()
         return queryset
+
 
 class TestFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")
@@ -165,6 +168,7 @@ class TestFilter(filters.FilterSet):
         if value:
             return queryset.filter(Q(user__icontains=value)| Q(score__icontains=value) | Q(status__icontains=value)).distinct()
         return queryset
+
 
 class UserFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")

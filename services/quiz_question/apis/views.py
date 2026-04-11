@@ -41,7 +41,6 @@ class _BaseQuestionViewSet:
 
 
 class QuizQuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
-
     @extend_schema(**update_question_document)
     def update(self, request, pk=None):
         pk, error_response =self.get_id(pk)

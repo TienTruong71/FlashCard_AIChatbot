@@ -248,6 +248,18 @@ services:
       - redis_network
       - dbnetwork
 
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./services/frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - 5173:5173
+    networks:
+      - nginx_network
+
   nginx:
     build: ./nginx
     volumes:
@@ -287,4 +299,3 @@ networks:
     driver: bridge
   dbnetwork:
     driver: bridge
-

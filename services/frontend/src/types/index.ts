@@ -1,0 +1,201 @@
+// =====================
+// Generic API Response
+// =====================
+export interface ApiResponse<T> {
+  status: boolean
+  message?: string
+  data?: T
+}
+
+export interface PaginatedResponse<T> {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
+// =====================
+// Auth & User
+// =====================
+export interface User {
+  id: number
+  email: string
+  first_name: string
+  last_name: string
+  avatar?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AuthTokens {
+  access_token: string
+  refresh_token: string
+}
+
+export interface UserWithTokens extends User {
+  access_token: string
+  refresh_token: string
+}
+
+export interface LoginPayload {
+  email: string
+  password: string
+}
+
+export interface RegisterPayload {
+  email: string
+  password: string
+  first_name: string
+  last_name: string
+}
+
+// =====================
+// Set
+// =====================
+export interface Set {
+  id: number
+  title: string
+  description?: string
+  user: number
+  is_public: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateSetPayload {
+  title: string
+  description?: string
+  is_public?: boolean
+}
+
+// =====================
+// Question
+// =====================
+export interface Question {
+  id: number
+  content: string
+  type: string
+  set: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateQuestionPayload {
+  content: string
+  type: string
+  set: number
+}
+
+// =====================
+// Quiz
+// =====================
+export interface QuizQuestionAnswer {
+  id: number
+  content: string
+  is_correct: boolean
+}
+
+export interface QuizQuestion {
+  id: number
+  quiz: number
+  question?: number
+  title: string
+  type: string
+  answers: QuizQuestionAnswer[]
+  created_at: string
+}
+
+export interface Quiz {
+  id: number
+  title: string
+  set: number
+  user: number
+  is_published: boolean
+  question_count: number
+  quiz_questions?: QuizQuestion[]
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateQuizPayload {
+  title: string
+  set: number
+}
+
+export interface UpdateQuizPayload {
+  title?: string
+  is_published?: boolean
+}
+
+export interface CreateQuizQuestionPayload {
+  question?: number
+  title: string
+  type: string
+  answers: { content: string; is_correct: boolean }[]
+}
+
+export interface ShareQuizPayload {
+  shares: { user_id: number; permission: string }[]
+}
+
+// =====================
+// Quiz Questions (relation service)
+// =====================
+export interface QuizQuestionItem {
+  id: number
+  quiz: number
+  question: number
+  order?: number
+}
+
+// =====================
+// Test
+// =====================
+export interface TestAnswer {
+  id: number
+  quiz_question: number
+  answer_id?: number
+  content?: string
+  is_correct: boolean
+}
+
+export interface Test {
+  id: number
+  quiz: number
+  user: number
+  score?: number
+  answers: TestAnswer[]
+  created_at: string
+}
+
+export interface CreateTestPayload {
+  quiz: number
+}
+
+export interface AnswerTestPayload {
+  answers: { quiz_question_id: number; answer_id?: number; content?: string }[]
+}
+
+// =====================
+// Notification
+// =====================
+export interface Notification {
+  id: number
+  user: number
+  title: string
+  message: string
+  is_read: boolean
+  created_at: string
+}
+
+// =====================
+// Pagination params
+// =====================
+export interface PaginationParams {
+  page?: number
+  page_size?: number
+  search?: string
+  ordering?: string
+  [key: string]: string | number | boolean | undefined
+}

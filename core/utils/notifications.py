@@ -9,6 +9,7 @@ def send_question_update_warning(question):
     except Exception as e:
         logger.error(f"[Celery] Failed to queue question update task for ID {question.id}: {e}")
 
+
 def send_share_notification(recipient, item_title, item_type="Quiz", permission="View"):
     if not recipient.email:
         return

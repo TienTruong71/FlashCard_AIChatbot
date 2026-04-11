@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     default-libmysqlclient-dev \
     libpq-dev \
+    python3-dev \
     vim \
     tzdata \
     pkg-config \
@@ -30,7 +31,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install -U pip poetry && \
     rm -rf /root/.cache/pip
 COPY ./poetry.lock ./pyproject.toml ./
-RUN poetry install
+RUN poetry install --no-interaction --no-ansi --no-root
 
 # copy folder
 COPY . $APP_HOME
