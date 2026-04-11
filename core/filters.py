@@ -13,6 +13,23 @@ class NotificationFilter(filters.FilterSet):
 class SetFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")
 
+    ordering = filters.OrderingFilter(
+        fields=(
+            ("id", "id"),
+            ("title", "title"),
+            ("description", "description"),
+            ("created_at", "created_at"),
+            ("updated_at", "updated_at"),
+        ),
+        field_labels={
+            "id": "ID",
+            "title": "Title",
+            "description": "Description",
+            "created_at": "Created Time",
+            "updated_at": "Updated Time",
+        }
+    )
+
     def filter_by_q(self, queryset, name, value):
         if value:
             return queryset.filter(
@@ -25,6 +42,22 @@ class QuestionFilter(filters.FilterSet):
     type = filters.CharFilter(field_name="type", lookup_expr="exact")
     types = filters.BaseInFilter(field_name="type", lookup_expr="in")
 
+    ordering = filters.OrderingFilter(
+        fields=(
+            ("id", "id"),
+            ("title", "title"),
+            ("type", "type"),
+            ("created_at", "created_at"),
+            ("updated_at", "updated_at"),
+        ),
+        field_labels={
+            "id": "ID",
+            "title": "Title",
+            "type": "Type",
+            "created_at": "Created Time",
+            "updated_at": "Updated Time",
+        }
+    )
     class Meta:
         model = Question
         fields = ["q", "type", "types"]
@@ -42,6 +75,22 @@ class QuizQuestionFilter(filters.FilterSet):
     type = filters.CharFilter(field_name="type", lookup_expr="exact")
     types = filters.BaseInFilter(field_name="type", lookup_expr="in")
 
+    ordering = filters.OrderingFilter(
+        fields=(
+            ("id", "id"),
+            ("title", "title"),
+            ("type", "type"),
+            ("created_at", "created_at"),
+            ("updated_at", "updated_at"),
+        ),
+        field_labels={
+            "id": "ID",
+            "title": "Title",
+            "type": "Type",
+            "created_at": "Created Time",
+            "updated_at": "Updated Time",
+        }
+    )
     class Meta:
         model = QuizQuestion
         fields = ["q", "type", "types"]
@@ -56,7 +105,23 @@ class QuizQuestionFilter(filters.FilterSet):
 
 class QuizFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")
-
+    ordering = filters.OrderingFilter(
+        fields=(
+            ("id", "id"),
+            ("title", "title"),
+            ("description", "description"),
+            ("created_at", "created_at"),
+            ("updated_at", "updated_at"),
+        ),
+        field_labels={
+            "id": "ID",
+            "title": "Title",
+            "description": "Description",
+            "created_at": "Created Time",
+            "updated_at": "Updated Time",
+        }
+    ) 
+    
     def filter_by_q(self, queryset, name, value):
         if value:
             return queryset.filter(Q(title__icontains=value)).distinct()
@@ -64,6 +129,24 @@ class QuizFilter(filters.FilterSet):
 
 class TestFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")
+    ordering = filters.OrderingFilter(
+        fields=(
+            ("id", "id"),
+            ("user", "user"),
+            ("score", "score"),
+            ("status", "status"),
+            ("created_at", "created_at"),
+            ("updated_at", "updated_at"),
+        ),
+        field_labels={
+            "id": "ID",
+            "user": "User",
+            "score": "Score",
+            "status": "Status",
+            "created_at": "Created Time",
+            "updated_at": "Updated Time",
+        }
+    ) 
 
     def filter_by_q(self, queryset, name, value):
         if value:
@@ -72,6 +155,26 @@ class TestFilter(filters.FilterSet):
 
 class UserFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Set")
+    ordering = filters.OrderingFilter(
+        fields=(
+            ("id", "id"),
+            ("email", "email"),
+            ("role", "role"),
+            ("first_name", "first_name"),
+            ("last_name", "last_name"),
+            ("created_at", "created_at"),
+            ("updated_at", "updated_at"),
+        ),
+        field_labels={
+            "id": "ID",
+            "email": "Email",
+            "role": "Role",
+            "first_name": "First Name",
+            "last_name": "Last Name",
+            "created_at": "Created Time",
+            "updated_at": "Updated Time",
+        }
+    ) 
 
     def filter_by_q(self, queryset, name, value):
         if value:

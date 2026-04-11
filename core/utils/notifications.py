@@ -15,10 +15,10 @@ def send_share_notification(recipient, item_title, item_type="Quiz", permission=
 
     try:
         send_share_notification_task.delay(
-            recipient.email, 
-            recipient.full_name, 
-            item_title, 
-            item_type, 
+            recipient.email,
+            recipient.full_name,
+            item_title,
+            item_type,
             permission
         )
     except Exception as e:

@@ -197,7 +197,6 @@ class RefreshTokenSerializer(serializers.Serializer):
         if not refresh:
             raise AuthenticationFailed("No refresh token provided!")
 
-        # Lấy thông tin user từ token
         user_id = refresh.payload.get("user_id")
         user = User.objects.get(id=user_id)
         token_version = refresh.payload.get("token_version", None)
@@ -209,11 +208,8 @@ class RefreshTokenSerializer(serializers.Serializer):
         if api_settings.ROTATE_REFRESH_TOKENS:
             if api_settings.BLACKLIST_AFTER_ROTATION:
                 try:
-                    # Attempt to blacklist the given refresh token
                     refresh.blacklist()
                 except AttributeError:
-                    # If blacklist app not installed, `blacklist` method will
-                    # not be present
                     pass
 
             refresh.set_jti()
