@@ -20,7 +20,7 @@ export const questionApi = {
 
 
   update: (id: number, payload: { title?: string; type?: string; answers?: { content: string; is_correct: boolean }[] }) =>
-    axiosInstance.patch<ApiResponse<Question>>(`${QUESTION_BASE}/${id}/`, payload),
+    axiosInstance.put<ApiResponse<Question>>(`${QUESTION_BASE}/${id}/`, payload),
 
 
   destroy: (id: number) =>

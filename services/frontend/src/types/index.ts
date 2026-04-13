@@ -121,7 +121,7 @@ export interface Quiz {
   user: number
   is_published: boolean
   question_count: number
-  quiz_questions?: QuizQuestion[]
+  questions?: QuizQuestion[]
   created_at: string
   updated_at: string
 }

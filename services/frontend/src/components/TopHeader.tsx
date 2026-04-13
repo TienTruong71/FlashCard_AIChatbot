@@ -29,7 +29,7 @@ export const TopHeader = () => {
   const breadcrumbMap: Record<string, string> = {
     dashboard: t.nav_overview,
     sets: t.nav_library,
-    quizzes: t.nav_aiGenerator,
+    quizzes: t.config_quizzes,
     analytics: t.nav_analytics,
     tests: t.test_breadcrumb
   }
@@ -43,8 +43,12 @@ export const TopHeader = () => {
         </Link>
         {pathnames.map((value, index) => {
           const last = index === pathnames.length - 1
-          const to = `/${pathnames.slice(0, index + 1).join('/')}`
+          let to = `/${pathnames.slice(0, index + 1).join('/')}`
           const label = breadcrumbMap[value] || (value.length > 10 ? 'Detail' : value)
+          
+          if (to === '/quizzes') {
+            to = '/sets?tab=quizzes'
+          }
 
           return (
             <div key={to} style={{ display: 'flex', alignItems: 'center' }}>

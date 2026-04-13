@@ -17,7 +17,7 @@ export const translations = {
 
     // Dashboard
     dash_welcomeBack: 'WELCOME BACK',
-    dash_readyForDeepWork: 'Ready for deep work?',
+    dash_readyForDeepWork: 'Ready to fight Quiz?',
     dash_newAiCapabilities: '✦ NEW AI CAPABILITIES',
     dash_heroTitle: 'Transform notes into quizzes instantly.',
     dash_heroDesc: 'Upload PDFs, lecture slides, or paste raw text. Our AI generates comprehensive flashcards in seconds.',
@@ -288,7 +288,7 @@ export const translations = {
 
     // Dashboard
     dash_welcomeBack: 'CHÀO MỪNG TRỞ LẠI',
-    dash_readyForDeepWork: 'Sẵn sàng học sâu chưa?',
+    dash_readyForDeepWork: 'Sẵn sàng chiến Quiz chưa nào?',
     dash_newAiCapabilities: '✦ TÍNH NĂNG AI MỚI',
     dash_heroTitle: 'Chuyển ghi chú thành quiz ngay lập tức.',
     dash_heroDesc: 'Tải lên PDF, slide bài giảng, hoặc dán văn bản. AI tạo flashcard toàn diện trong vài giây.',
@@ -305,10 +305,10 @@ export const translations = {
     dash_tryChallengeMode: 'Thử chế độ thử thách',
     dash_completed: 'Đã xong',
     dash_inProgress: 'Đang làm',
-    dash_lastPlayed: 'Lần chơi cuối',
+    dash_lastPlayed: 'Lần làm quiz gần nhất',
     dash_mastery: 'THÀNH THẠO',
     dash_progress: 'TIẾN ĐỘ',
-    dash_lastScore: 'ĐIỂM CỮ',
+    dash_lastScore: 'ĐIỂM CŨ',
     dash_cards: 'Thẻ',
     dash_noSets: 'Chưa có bộ nào. Hãy tạo bộ đầu tiên!',
     dash_noQuizzes: 'Chưa có quiz gần đây.',

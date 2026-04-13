@@ -19,7 +19,7 @@ export const quizQuestionApi = {
 
 
   update: (id: number, payload: UpdateQuizQuestionPayload) =>
-    axiosInstance.patch<ApiResponse<QuizQuestion>>(`${QQ_BASE}/${id}/`, payload),
+    axiosInstance.put<ApiResponse<QuizQuestion>>(`${QQ_BASE}/${id}/`, payload),
 
 
   destroy: (id: number) =>

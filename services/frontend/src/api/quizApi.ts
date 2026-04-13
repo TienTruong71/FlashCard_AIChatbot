@@ -26,7 +26,7 @@ export const quizApi = {
 
 
   update: (id: number, payload: UpdateQuizPayload) =>
-    axiosInstance.patch<ApiResponse<Quiz>>(`${QUIZ_BASE}/${id}/`, payload),
+    axiosInstance.put<ApiResponse<Quiz>>(`${QUIZ_BASE}/${id}/`, payload),
 
 
   destroy: (id: number) =>

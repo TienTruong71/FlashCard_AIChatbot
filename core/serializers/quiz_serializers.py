@@ -68,12 +68,17 @@ class CreateQuizSerializer(serializers.ModelSerializer):
     )
 
     question_count = serializers.IntegerField(
-        required=True,
+        required=False,
         min_value=1,
         error_messages={
-            "required": "Please enter question count!",
             "min_value": "Question count must be >=1",
         }
+    )
+
+    question_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
     )
 
     is_published = serializers.BooleanField(required=False, default=False)
@@ -83,6 +88,7 @@ class CreateQuizSerializer(serializers.ModelSerializer):
         fields = [
             "title",
             "question_count",
+            "question_ids",
             "is_published",
         ]
 

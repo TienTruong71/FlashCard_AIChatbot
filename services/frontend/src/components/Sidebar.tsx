@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   BookOpen,
-  Sparkles,
+  FileQuestion,
   BarChart2,
   HelpCircle,
   LogOut,
@@ -16,7 +16,6 @@ import { translations } from '../i18n'
 const navItems = [
   { key: '/dashboard', icon: LayoutDashboard, labelKey: 'nav_overview' as const },
   { key: '/sets', icon: BookOpen, labelKey: 'nav_library' as const },
-  { key: '/quizzes', icon: Sparkles, labelKey: 'nav_aiGenerator' as const },
   { key: '/analytics', icon: BarChart2, labelKey: 'nav_analytics' as const },
 ]
 

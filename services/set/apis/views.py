@@ -275,33 +275,51 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             return global_response_errors(serializer.errors)
 
         validated_data = serializer.validated_data
-        question_count = validated_data["question_count"]
+        question_count = validated_data.get("question_count")
+        question_ids = validated_data.get("question_ids")
 
-        questions = list(set_study.questions.all())
-
-        if len(questions) < question_count:
-            return Response(
-                {
-                    "status": False,
-                    "message": "Not enough questions in set!"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        random_questions = random.sample(questions, question_count)
+        if question_ids:
+            questions = list(set_study.questions.filter(id__in=question_ids))
+            if len(questions) != len(set(question_ids)):
+                return Response(
+                    {
+                        "status": False,
+                        "message": "Some question IDs do not exist in this set!"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            selected_questions = questions
+            actual_count = len(questions)
+        else:
+            if not question_count:
+                return Response(
+                    {"status": False, "message": "question_count is required if question_ids is not provided!"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            questions = list(set_study.questions.all())
+            if len(questions) < question_count:
+                return Response(
+                    {
+                        "status": False,
+                        "message": "Not enough questions in set!"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            selected_questions = random.sample(questions, question_count)
+            actual_count = question_count
 
         with transaction.atomic():
             quiz = Quiz.objects.create(
                 user=request.user,
                 set=set_study,
                 title=validated_data["title"],
-                question_count=question_count,
+                question_count=actual_count,
                 is_published=validated_data.get("is_published", False),
             )
 
             quiz_answers = []
 
-            for q in random_questions:
+            for q in selected_questions:
                 qq = QuizQuestion.objects.create(
                     quiz=quiz,
                     question=q,

@@ -16,11 +16,11 @@ const QUIZ_ICON_COLORS = ['#a855f7', '#3d39cc', '#ec4899', '#0ea5e9']
 export const SetsPage = () => {
   const { language } = useLanguageStore()
   const t = translations[language]
-  
+
   const [activeTab, setActiveTab] = useState<'sets' | 'quizzes'>('sets')
   const [sets, setSets] = useState<Set[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
-  
+
   const [loading, setLoading] = useState(true)
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [searchText, setSearchText] = useState('')
@@ -53,6 +53,10 @@ export const SetsPage = () => {
       searchParams.delete('create')
       setSearchParams(searchParams)
     }
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'quizzes' || tabParam === 'sets') {
+      setActiveTab(tabParam)
+    }
   }, [searchParams])
 
   useEffect(() => { fetchData() }, [activeTab, ordering])
@@ -60,12 +64,12 @@ export const SetsPage = () => {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setSearchText(val)
-    
+
     const params = { q: val || undefined, ordering }
     if (activeTab === 'sets') {
-      setApi.list(params).then(res => setSets(res.data?.data || [])).catch(() => {})
+      setApi.list(params).then(res => setSets(res.data?.data || [])).catch(() => { })
     } else {
-      quizApi.list(params).then(res => setQuizzes(res.data?.data || [])).catch(() => {})
+      quizApi.list(params).then(res => setQuizzes(res.data?.data || [])).catch(() => { })
     }
   }
 
@@ -103,7 +107,7 @@ export const SetsPage = () => {
             onChange={(val: any) => setActiveTab(val)}
             style={{ padding: 4, borderRadius: 10 }}
           />
-          
+
           <div style={{ display: 'flex', gap: 12 }}>
             <div className="top-header-search" style={{ width: 240 }}>
               <Search size={14} />
@@ -113,7 +117,7 @@ export const SetsPage = () => {
                 onChange={handleSearch}
               />
             </div>
-            
+
             <Select
               value={ordering}
               onChange={setOrdering}
@@ -152,7 +156,7 @@ export const SetsPage = () => {
             const isSet = activeTab === 'sets'
             const Icon = isSet ? SET_ICONS[i % SET_ICONS.length] : QUIZ_ICONS[i % QUIZ_ICONS.length]
             const iconColor = isSet ? SET_ICON_COLORS[i % SET_ICON_COLORS.length] : QUIZ_ICON_COLORS[i % QUIZ_ICON_COLORS.length]
-            
+
             return (
               <div key={item.id} className="set-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -172,7 +176,7 @@ export const SetsPage = () => {
                   {item.title}
                 </p>
                 <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5, minHeight: 38 }}>
-                  {isSet 
+                  {isSet
                     ? ((item as Set).description ? (item as Set).description!.slice(0, 80) : t.lib_noDescription)
                     : `Gồm ${(item as Quiz).question_count} câu hỏi ngẫu nhiên.`}
                 </p>

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Form, Input, Switch, message, Modal, Slider, Checkbox } from 'antd'
+import { Form, Input, Switch, message, Modal, Slider } from 'antd'
 import { setApi, questionApi } from '../api'
 import type { Set, Question, Quiz } from '../types'
 import { useLanguageStore } from '../store/languageStore'
 import { translations } from '../i18n'
-import { Sliders, Share2, Plus, Trash2, Play, ChevronRight, Eye, MinusCircle, Sparkles, BookOpen, Pencil } from 'lucide-react'
+import { Share2, Plus, Trash2, ChevronRight, Eye, MinusCircle, Sparkles, BookOpen, Pencil } from 'lucide-react'
 
 type QuestionType = 'single' | 'checkbox' | 'text'
 
@@ -27,6 +27,9 @@ export const SetDetailPage = () => {
   const [selectedTypes, setSelectedTypes] = useState<QuestionType[]>(['single', 'text'])
   const [questionCount, setQuestionCount] = useState(25)
   const [collaboratorInput, setCollaboratorInput] = useState('')
+
+  const [quizMode, setQuizMode] = useState<'random' | 'manual'>('random')
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([])
 
   const [qForm] = Form.useForm()
   const [quizForm] = Form.useForm()
@@ -107,11 +110,19 @@ export const SetDetailPage = () => {
 
   const handleCreateQuiz = async (values: any) => {
     try {
-      const res = await setApi.createQuiz(Number(id), {
+      const payload: any = {
         title: values.title,
-        question_count: Math.min(Number(values.question_count), questions.length),
         is_published: values.is_published,
-      })
+      }
+      
+      if (quizMode === 'random') {
+        payload.question_count = Math.min(Number(values.question_count), questions.length)
+      } else {
+        if (selectedQuestionIds.length === 0) return message.error('Vui lòng chọn ít nhất 1 câu hỏi!')
+        payload.question_ids = selectedQuestionIds
+      }
+
+      const res = await setApi.createQuiz(Number(id), payload)
       message.success(t.common_success)
       setQuizModalOpen(false)
       quizForm.resetFields()
@@ -357,12 +368,25 @@ export const SetDetailPage = () => {
               className="btn btn-primary w-full"
               style={{ marginTop: 24 }}
               onClick={() => {
+                setQuizMode('random')
                 quizForm.setFieldsValue({ question_count: questions.length === 0 ? 0 : Math.min(questionCount, questions.length) })
                 setQuizModalOpen(true)
               }}
               disabled={questions.length === 0}
             >
               <Plus size={13} /> {t.config_createQuiz}
+            </button>
+            <button
+              className="btn btn-outline w-full"
+              style={{ marginTop: 10 }}
+              onClick={() => {
+                setQuizMode('manual')
+                setSelectedQuestionIds([])
+                setQuizModalOpen(true)
+              }}
+              disabled={questions.length === 0}
+            >
+              {t.config_createQuiz} (Thủ công)
             </button>
           </div>
         </div>
@@ -439,19 +463,52 @@ export const SetDetailPage = () => {
 
       {/* Create Quiz Modal */}
       <Modal
-        title={<span style={{ fontWeight: 700 }}>{t.config_createQuiz}</span>}
+        title={<span style={{ fontWeight: 700 }}>{t.config_createQuiz} - {quizMode === 'random' ? 'Ngẫu nhiên' : 'Thủ công'}</span>}
         open={isQuizModalOpen}
-        onCancel={() => { setQuizModalOpen(false); quizForm.resetFields() }}
+        onCancel={() => { setQuizModalOpen(false); quizForm.resetFields(); setSelectedQuestionIds([]) }}
         footer={null}
-        width={440}
+        width={quizMode === 'random' ? 440 : 600}
       >
         <Form form={quizForm} layout="vertical" onFinish={handleCreateQuiz} style={{ marginTop: 16 }}>
           <Form.Item name="title" label={t.config_quizTitle} rules={[{ required: true }]}>
             <Input placeholder="e.g. Midterm Practice Quiz" />
           </Form.Item>
-          <Form.Item name="question_count" label={t.config_questionCount} rules={[{ required: true }]}>
-            <Input type="number" min={1} max={questions.length} />
-          </Form.Item>
+          
+          {quizMode === 'random' ? (
+            <Form.Item name="question_count" label={t.config_questionCount} rules={[{ required: true }]}>
+              <Input type="number" min={1} max={questions.length} />
+            </Form.Item>
+          ) : (
+            <div style={{ marginBottom: 20 }}>
+              <label className="form-label" style={{ display: 'block', marginBottom: 8 }}>
+                Chọn câu hỏi ({selectedQuestionIds.length}/{questions.length})
+              </label>
+              <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: 8 }}>
+                {questions.map(q => (
+                  <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderBottom: '1px solid var(--border-light)' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedQuestionIds.includes(q.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedQuestionIds(prev => [...prev, q.id])
+                        else setSelectedQuestionIds(prev => prev.filter(id => id !== q.id))
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: getTypeBadgeColor(q.type), marginRight: 8, textTransform: 'uppercase' }}>
+                        {getTypeLabel(q.type)}
+                      </span>
+                      <span style={{ fontSize: 13, color: 'var(--text)' }}>
+                        {q.title.length > 80 ? q.title.substring(0, 80) + '...' : q.title}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Form.Item name="is_published" label={t.config_publishNow} valuePropName="checked">
             <Switch />
           </Form.Item>
@@ -460,7 +517,7 @@ export const SetDetailPage = () => {
               {t.common_cancel}
             </button>
             <button type="submit" className="btn btn-primary">
-              <Play size={13} /> {t.config_startTest}
+              <Plus size={13} /> {t.config_createQuiz}
             </button>
           </div>
         </Form>
