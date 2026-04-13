@@ -139,8 +139,19 @@ def calculate_average_percent(list):
     return round(float(average_percent), 2)
 
 
-def path_is_excluded(current_route, list) -> bool:
-    return any(current_route.startswith(path) for path in list)
+def path_is_excluded(current_route: str, list: List[str]) -> bool:
+    if not current_route:
+        return False
+
+    # Normalize current_route: remove leading/trailing slashes and 'api/' prefix for comparison
+    normalized_route = current_route.strip("/").replace("api/", "", 1)
+
+    for path in list:
+        # Normalize path in list as well
+        normalized_path = path.strip("/").replace("api/", "", 1)
+        if normalized_route.startswith(normalized_path):
+            return True
+    return False
 
 
 def validate_max_length(value, max_length, field_name):

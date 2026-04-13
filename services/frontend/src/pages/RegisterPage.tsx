@@ -32,11 +32,8 @@ export const RegisterPage = () => {
       message.success(t.auth_otpSent)
       setStep(2)
     } catch (error: any) {
-      if (error.response?.data?.email) {
-        message.error(t.auth_registerFailed)
-      } else {
-        message.error(t.common_error)
-      }
+      const errorMsg = error.response?.data?.message || t.auth_registerFailed
+      message.error(errorMsg)
     } finally {
       setLoading(false)
     }

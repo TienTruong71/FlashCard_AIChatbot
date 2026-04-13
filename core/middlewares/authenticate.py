@@ -10,5 +10,5 @@ class AuthenticateMiddleware(IsAuthenticated):
         current_route = request.resolver_match.route
         if path_is_excluded(current_route, EXCLUDE_AUTH_PATH):
             return True
-        else:
-            return super().has_permission(request, view)
+        
+        return super().has_permission(request, view)

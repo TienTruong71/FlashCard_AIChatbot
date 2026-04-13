@@ -17,7 +17,7 @@ export const TopHeader = () => {
   useEffect(() => {
     notificationApi.unreadCount()
       .then(res => setUnreadCount(res.data?.data || 0))
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   const initials = user
@@ -27,7 +27,7 @@ export const TopHeader = () => {
   // Breadcrumb logic
   const pathnames = location.pathname.split('/').filter(x => x)
   const breadcrumbMap: Record<string, string> = {
-    dashboard: t.nav_dashboard,
+    dashboard: t.nav_overview,
     sets: t.nav_library,
     quizzes: t.nav_aiGenerator,
     analytics: t.nav_analytics,

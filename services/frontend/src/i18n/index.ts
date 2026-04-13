@@ -4,6 +4,7 @@ export const translations = {
   en: {
     // Navigation
     nav_dashboard: 'Get Started',
+    nav_overview: 'Overview',
     nav_library: 'Library',
     nav_aiGenerator: 'AI Generator',
     nav_analytics: 'Analytics',
@@ -274,6 +275,7 @@ export const translations = {
   vi: {
     // Navigation
     nav_dashboard: 'Bắt đầu ngay',
+    nav_overview: 'Tổng quan',
     nav_library: 'Thư viện',
     nav_aiGenerator: 'AI Generator',
     nav_analytics: 'Phân tích',

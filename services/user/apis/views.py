@@ -48,7 +48,7 @@ class AuthenViewSet(viewsets.ViewSet):
 
 
     @extend_schema(**register_user_document)
-    @action(detail=False, methods=["post"], url_path="register", permission_classes=[AllowAny])
+    @action(detail=False, methods=["post"], url_path="register", permission_classes=[AllowAny], authentication_classes=[])
     def create_user(self, request):
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid():
@@ -65,7 +65,7 @@ class AuthenViewSet(viewsets.ViewSet):
 
         return global_response_errors(serializer.errors)
 
-    @action(detail=False, methods=["post"], url_path="verify-otp", permission_classes=[AllowAny])
+    @action(detail=False, methods=["post"], url_path="verify-otp", permission_classes=[AllowAny], authentication_classes=[])
     def verify_otp(self, request):
         email = request.data.get("email")
         otp = request.data.get("otp")
@@ -114,7 +114,7 @@ class AuthenViewSet(viewsets.ViewSet):
         )
 
 
-    @action(detail=False, methods=["post"], url_path="resend-otp", permission_classes=[AllowAny])
+    @action(detail=False, methods=["post"], url_path="resend-otp", permission_classes=[AllowAny], authentication_classes=[])
     def resend_otp(self, request):
         email = request.data.get("email")
 
@@ -153,7 +153,7 @@ class AuthenViewSet(viewsets.ViewSet):
 
 
     @extend_schema(**login_user_document)
-    @action(methods=["post"], detail=False, url_path="login", permission_classes=[AllowAny])
+    @action(methods=["post"], detail=False, url_path="login", permission_classes=[AllowAny], authentication_classes=[])
     def login_user(self, request):
         serializer = UserLoginSerializer(
             data=request.data, context={"request": request}
@@ -209,6 +209,7 @@ class AuthenViewSet(viewsets.ViewSet):
 
 
 class CustomTokenRefreshView(TokenRefreshView):
+    authentication_classes = []
     @extend_schema(**refresh_token_document)
     def post(self, request, *args, **kwargs):
         serializer = RefreshTokenSerializer(data=request.data)
