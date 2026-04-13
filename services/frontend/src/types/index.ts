@@ -80,17 +80,19 @@ export interface CreateSetPayload {
 // =====================
 export interface Question {
   id: number
-  content: string
+  title: string
   type: string
   set: number
+  answers?: QuizQuestionAnswer[]
   created_at: string
   updated_at: string
 }
 
 export interface CreateQuestionPayload {
-  content: string
+  title: string
   type: string
   set: number
+  answers: { content: string; is_correct: boolean }[]
 }
 
 // =====================

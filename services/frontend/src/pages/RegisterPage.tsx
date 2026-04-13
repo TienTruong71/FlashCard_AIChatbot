@@ -1,233 +1,231 @@
-import { Button, Form, Input, Card, Typography, message } from 'antd'
-import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { message } from 'antd'
+import { Sparkles, ArrowRight, Mail, Lock, EyeOff, Eye, User } from 'lucide-react'
 import { authApi } from '../api'
-import { useState, useEffect } from 'react'
-
-const { Title, Text } = Typography
+import { useLanguageStore } from '../store/languageStore'
+import { useThemeStore } from '../store/themeStore'
+import { translations } from '../i18n'
 
 export const RegisterPage = () => {
-  const navigate = useNavigate()
-  const [showOtp, setShowOtp] = useState(false)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
-  const [otpLoading, setOtpLoading] = useState(false)
-  const [countdown, setCountdown] = useState(0)
-  const [canResend, setCanResend] = useState(false)
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [otp, setOtp] = useState('')
+  const [step, setStep] = useState<1 | 2>(1)
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (showOtp && countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown((prev) => prev - 1)
-      }, 1000)
-    } else if (countdown === 0) {
-      setCanResend(true)
-    }
-    return () => clearInterval(timer)
-  }, [showOtp, countdown])
+  const { language } = useLanguageStore()
+  const { theme } = useThemeStore()
+  const t = translations[language]
+  const navigate = useNavigate()
 
-  const onFinish = async (values: any) => {
+  const isDark = theme === 'dark'
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
     try {
-      setOtpLoading(true)
-      await authApi.register({
-        email: values.email,
-        password: values.password,
-        first_name: values.first_name,
-        last_name: values.last_name,
-      })
-      setEmail(values.email)
-      setShowOtp(true)
-      setCountdown(60)
-      setCanResend(false)
-      message.success('Đã gửi mã OTP vào email của bạn!')
+      await authApi.register({ email, password, first_name: firstName, last_name: lastName })
+      message.success(t.auth_otpSent)
+      setStep(2)
     } catch (error: any) {
-      message.error(error.errorMessage || 'Đăng ký thất bại. Vui lòng thử lại.')
+      if (error.response?.data?.email) {
+        message.error(t.auth_registerFailed)
+      } else {
+        message.error(t.common_error)
+      }
     } finally {
-      setOtpLoading(false)
+      setLoading(false)
     }
   }
 
-  const handleResendOtp = async () => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
     try {
-      setOtpLoading(true)
-      await authApi.resendOtp(email)
-      setCountdown(60)
-      setCanResend(false)
-      message.success('Mã OTP mới đã được gửi!')
-    } catch (error: any) {
-      message.error(error.errorMessage || 'Gửi lại mã thất bại.')
-    } finally {
-      setOtpLoading(false)
-    }
-  }
-
-  const onVerifyOtp = async (values: { otp: string }) => {
-    try {
-      setOtpLoading(true)
-      await authApi.verifyOtp({
-        email: email,
-        otp: values.otp
-      })
-      message.success('Xác thực thành công! Bạn có thể đăng nhập ngay.')
+      await authApi.verifyOtp({ email, otp })
+      message.success(t.auth_otpVerified)
       navigate('/login')
-    } catch (error: any) {
-      message.error(error.errorMessage || 'Mã OTP không đúng hoặc đã hết hạn.')
+    } catch {
+      message.error(t.auth_otpInvalid)
     } finally {
-      setOtpLoading(false)
+      setLoading(false)
     }
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', padding: '40px 0' }}>
-      <Card
-        className="glass-card"
-        style={{ width: 450, padding: '20px' }}
-        variant="borderless"
-      >
-        {!showOtp ? (
-          <>
-            <div style={{ textAlign: 'center', marginBottom: 30 }}>
-              <Title level={2} style={{ color: '#fff', marginBottom: 8 }}>Tạo tài khoản</Title>
-              <Text style={{ color: '#aaa' }}>Tham gia cộng đồng học tập ngay hôm nay</Text>
-            </div>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: isDark ? '#0b0914' : '#f8f8fc',
+      position: 'relative',
+      overflow: 'hidden',
+      fontFamily: 'var(--font)'
+    }}>
+      {/* Decorative premium orb layout */}
+      <div style={{
+        position: 'absolute', width: 600, height: 600, borderRadius: '50%',
+        background: isDark ? 'radial-gradient(circle at center, rgba(168,85,247,0.2) 0%, transparent 70%)' : 'radial-gradient(circle at center, rgba(168,85,247,0.15) 0%, transparent 70%)',
+        bottom: -100, right: -100, zIndex: 0
+      }} />
+      <div style={{
+        position: 'absolute', width: 800, height: 800, borderRadius: '50%',
+        background: isDark ? 'radial-gradient(circle at center, rgba(56,189,248,0.15) 0%, transparent 70%)' : 'radial-gradient(circle at center, rgba(56,189,248,0.1) 0%, transparent 70%)',
+        top: -200, left: -200, zIndex: 0
+      }} />
 
-            <Form
-              name="register"
-              onFinish={onFinish}
-              size="large"
-              layout="vertical"
-            >
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <Form.Item
-                  name="first_name"
-                  rules={[{ required: true, message: 'Nhập tên!' }]}
-                  style={{ flex: 1 }}
-                >
-                  <Input prefix={<UserOutlined />} placeholder="Tên" />
-                </Form.Item>
-                <Form.Item
-                  name="last_name"
-                  rules={[{ required: true, message: 'Nhập họ!' }]}
-                  style={{ flex: 1 }}
-                >
-                  <Input prefix={<UserOutlined />} placeholder="Họ" />
-                </Form.Item>
-              </div>
+      <div style={{
+        position: 'relative', zIndex: 1, width: '100%', maxWidth: 440,
+        background: isDark ? 'rgba(19, 17, 28, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.6)',
+        borderRadius: 24, padding: 40,
+        boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.5)' : '0 20px 60px rgba(0,0,0,0.05), inset 0 0 0 1px rgba(255,255,255,0.5)'
+      }}>
 
-              <Form.Item
-                name="email"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập email!' },
-                  { type: 'email', message: 'Email không hợp lệ!' }
-                ]}
-              >
-                <Input prefix={<MailOutlined />} placeholder="Email" />
-              </Form.Item>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{
+            width: 48, height: 48, margin: '0 auto 16px', background: 'linear-gradient(135deg, #a855f7, #6366f1)',
+            borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 20px rgba(168,85,247,0.3)'
+          }}>
+            <Sparkles size={24} color="white" />
+          </div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: isDark ? '#ffffff' : '#121221', letterSpacing: -0.5, marginBottom: 8 }}>
+            {step === 1 ? t.auth_createAccount : t.auth_verifyOtp}
+          </h1>
+          <p style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 15 }}>
+            {step === 1
+              ? (language === 'en' ? 'Start your journey to mastery' : 'Bắt đầu hành trình làm chủ kiến thức')
+              : t.auth_otpSentTo}
+          </p>
+        </div>
 
-              <Form.Item
-                name="password"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập mật khẩu!' },
-                  { min: 6, message: 'Mật khẩu phải lớn hơn 6 ký tự!' }
-                ]}
-              >
-                <Input.Password prefix={<LockOutlined />} placeholder="Mật khẩu" />
-              </Form.Item>
-
-              <Form.Item
-                name="confirm"
-                dependencies={['password']}
-                rules={[
-                  { required: true, message: 'Vui lòng xác nhận mật khẩu!' },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue('password') === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(new Error('Hai mật khẩu không khớp!'));
-                    },
-                  }),
-                ]}
-              >
-                <Input.Password prefix={<LockOutlined />} placeholder="Xác nhận mật khẩu" />
-              </Form.Item>
-
-              <Form.Item style={{ marginTop: '30px' }}>
-                <Button type="primary" htmlType="submit" style={{ width: '100%' }} loading={otpLoading}>
-                  Đăng ký
-                </Button>
-              </Form.Item>
-
-              <div style={{ textAlign: 'center' }}>
-                <Text style={{ color: '#aaa' }}>
-                  Đã có tài khoản? <Link to="/login" style={{ color: '#722ed1' }}>Đăng nhập</Link>
-                </Text>
-              </div>
-            </Form>
-          </>
-        ) : (
-          <>
-            <div style={{ textAlign: 'center', marginBottom: 30 }}>
-              <Title level={2} style={{ color: '#fff', marginBottom: 8 }}>Xác thực OTP</Title>
-              <Text style={{ color: '#aaa' }}>Mã OTP đã được gửi đến: <br /><b>{email}</b></Text>
-              <div style={{ marginTop: '10px' }}>
-                <Text type="warning" style={{ fontSize: '12px' }}>Lưu ý: Mã chỉ có hiệu lực trong 1 phút.</Text>
-              </div>
-            </div>
-
-            <Form
-              name="verify-otp"
-              onFinish={onVerifyOtp}
-              size="large"
-              layout="vertical"
-            >
-              <Form.Item
-                name="otp"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập mã OTP!' },
-                  { len: 6, message: 'Mã OTP phải có 6 chữ số!' }
-                ]}
-              >
-                <Input
-                  prefix={<LockOutlined />}
-                  placeholder="Nhập 6 số OTP"
-                  maxLength={6}
-                  style={{ textAlign: 'center', letterSpacing: '8px', fontSize: '20px' }}
+        {step === 1 ? (
+          <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <User size={18} color="#a1a1aa" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: 42, height: 48, background: isDark ? '#1c192b' : 'white', color: isDark ? 'white' : 'black', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e4e4e7', width: '100%' }}
+                  placeholder={t.auth_firstName}
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  required
                 />
-              </Form.Item>
-
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                {countdown > 0 ? (
-                  <Text style={{ color: '#aaa' }}>
-                    Gửi lại mã sau <b style={{ color: '#722ed1' }}>{countdown}</b> giây
-                  </Text>
-                ) : (
-                  <Button
-                    type="link"
-                    onClick={handleResendOtp}
-                    disabled={!canResend}
-                    style={{ padding: 0, height: 'auto' }}
-                  >
-                    Gửi lại mã
-                  </Button>
-                )}
               </div>
-
-              <Form.Item style={{ marginTop: '10px' }}>
-                <Button type="primary" htmlType="submit" style={{ width: '100%' }} loading={otpLoading}>
-                  Xác nhận
-                </Button>
-              </Form.Item>
-
-              <div style={{ textAlign: 'center' }}>
-                <Button type="link" onClick={() => setShowOtp(false)} style={{ color: '#aaa', fontSize: '13px' }}>
-                  Quay lại đăng ký
-                </Button>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <User size={18} color="#a1a1aa" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: 42, height: 48, background: isDark ? '#1c192b' : 'white', color: isDark ? 'white' : 'black', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e4e4e7', width: '100%' }}
+                  placeholder={t.auth_lastName}
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  required
+                />
               </div>
-            </Form>
-          </>
+            </div>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <div style={{ position: 'relative' }}>
+                <Mail size={18} color="#a1a1aa" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="email"
+                  className="form-input"
+                  style={{ paddingLeft: 42, height: 48, background: isDark ? '#1c192b' : 'white', color: isDark ? 'white' : 'black', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e4e4e7' }}
+                  placeholder={t.auth_email}
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <div style={{ position: 'relative' }}>
+                <Lock size={18} color="#a1a1aa" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="form-input"
+                  style={{ paddingLeft: 42, paddingRight: 42, height: 48, background: isDark ? '#1c192b' : 'white', color: isDark ? 'white' : 'black', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e4e4e7' }}
+                  placeholder={t.auth_password}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  {showPassword ? <Eye size={18} color="#a1a1aa" /> : <EyeOff size={18} color="#a1a1aa" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              style={{
+                height: 48, marginTop: 8, fontSize: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
+                border: 'none', boxShadow: '0 4px 15px rgba(168,85,247,0.3)'
+              }}
+            >
+              {loading ? '...' : t.auth_register} <ArrowRight size={18} />
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <input
+                type="text"
+                className="form-input"
+                style={{ textAlign: 'center', letterSpacing: 8, fontSize: 24, padding: 12, height: 60, background: isDark ? '#1c192b' : 'white', color: isDark ? 'white' : 'black', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e4e4e7' }}
+                placeholder="000000"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                required
+                maxLength={6}
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              style={{
+                height: 48, fontSize: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
+                border: 'none', boxShadow: '0 4px 15px rgba(168,85,247,0.3)'
+              }}
+            >
+              {loading ? '...' : t.auth_verify} <ArrowRight size={18} />
+            </button>
+          </form>
         )}
-      </Card>
+
+        <p style={{ textAlign: 'center', marginTop: 32, fontSize: 14, color: isDark ? '#a1a1aa' : '#71717a' }}>
+          {t.auth_haveAccount}{' '}
+          <Link to="/login" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>
+            {t.auth_signIn}
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }

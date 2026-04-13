@@ -45,8 +45,8 @@ class SetFilter(filters.FilterSet):
 
 class QuestionFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Question")
-    type = filters.CharFilter(field_name="type", lookup_expr="exact", db_index=True)
-    types = filters.BaseInFilter(field_name="type", lookup_expr="in", db_index=True)
+    type = filters.CharFilter(field_name="type", lookup_expr="exact")
+    types = filters.BaseInFilter(field_name="type", lookup_expr="in")
 
     ordering = filters.OrderingFilter(
         fields=(
@@ -79,8 +79,8 @@ class QuestionFilter(filters.FilterSet):
 
 class QuizQuestionFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_by_q", label="Search Question")
-    type = filters.CharFilter(field_name="type", lookup_expr="exact", db_index=True)
-    types = filters.BaseInFilter(field_name="type", lookup_expr="in", db_index=True)
+    type = filters.CharFilter(field_name="type", lookup_expr="exact")
+    types = filters.BaseInFilter(field_name="type", lookup_expr="in")
 
     ordering = filters.OrderingFilter(
         fields=(

@@ -1,24 +1,33 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Card, Typography, Tabs, Button, Table, Space, Tag, message, Modal, Form, Input, Select, Switch } from 'antd'
-import { ArrowLeftOutlined, PlusOutlined, DeleteOutlined, PlayCircleOutlined, MinusCircleOutlined } from '@ant-design/icons'
+import { Form, Input, Switch, message, Modal, Slider, Checkbox } from 'antd'
 import { setApi, questionApi } from '../api'
 import type { Set, Question, Quiz } from '../types'
+import { useLanguageStore } from '../store/languageStore'
+import { translations } from '../i18n'
+import { Sliders, Share2, Plus, Trash2, Play, ChevronRight, Eye, MinusCircle, Sparkles, BookOpen, Pencil } from 'lucide-react'
 
-const { Title, Text } = Typography
-const { Option } = Select
+type QuestionType = 'single' | 'checkbox' | 'text'
 
 export const SetDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  
+  const { language } = useLanguageStore()
+  const t = translations[language]
+
   const [setInfo, setSetInfo] = useState<Set | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
-  
+
   const [isQuestionModalOpen, setQuestionModalOpen] = useState(false)
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null)
   const [isQuizModalOpen, setQuizModalOpen] = useState(false)
+  const [isPublic, setIsPublic] = useState(false)
+  const [selectedTypes, setSelectedTypes] = useState<QuestionType[]>(['single', 'text'])
+  const [questionCount, setQuestionCount] = useState(25)
+  const [collaboratorInput, setCollaboratorInput] = useState('')
+
   const [qForm] = Form.useForm()
   const [quizForm] = Form.useForm()
 
@@ -29,256 +38,432 @@ export const SetDetailPage = () => {
       const [infoRes, qRes, quizRes] = await Promise.all([
         setApi.retrieve(Number(id)),
         questionApi.list({ set: id }),
-        setApi.listQuizzes(Number(id))
+        setApi.listQuizzes(Number(id)),
       ])
-      
       setSetInfo(infoRes.data?.data || null)
+      setIsPublic(infoRes.data?.data?.is_public || false)
       setQuestions(qRes.data?.data || [])
       setQuizzes(quizRes.data?.data || [])
-    } catch (error) {
-      message.error('Lỗi khi tải dữ liệu chi tiết')
+    } catch {
+      message.error(t.common_error)
     } finally {
       setLoading(false)
     }
   }
 
+  useEffect(() => { fetchData() }, [id])
+
+  // Sync Slider value when questions load
   useEffect(() => {
-    fetchData()
-  }, [id])
+    if (questions.length > 0) {
+      setQuestionCount(prev => Math.min(prev, questions.length) || Math.min(25, questions.length))
+    } else {
+      setQuestionCount(0)
+    }
+  }, [questions.length])
 
   const handleCreateQuestion = async (values: any) => {
     try {
       const { title, type, answers } = values
-      
       if (type === 'single') {
         const correctCount = answers.filter((a: any) => a.is_correct).length
-        if (answers.length < 2) return message.error('Câu hỏi một đáp án phải có ít nhất 2 phương án!')
-        if (correctCount !== 1) return message.error('Phải có duy nhất 1 đáp án đúng!')
+        if (answers.length < 2) return message.error('At least 2 options required!')
+        if (correctCount !== 1) return message.error('Exactly 1 correct answer required!')
       } else if (type === 'checkbox') {
         const correctCount = answers.filter((a: any) => a.is_correct).length
-        if (answers.length < 2) return message.error('Câu hỏi nhiều đáp án phải có ít nhất 2 phương án!')
-        if (correctCount < 1) return message.error('Phải có ít nhất 1 đáp án đúng!')
+        if (answers.length < 2) return message.error('At least 2 options required!')
+        if (correctCount < 1) return message.error('At least 1 correct answer required!')
       } else if (type === 'text') {
-        if (answers.length !== 1) return message.error('Câu hỏi tự luận chỉ có duy nhất 1 đáp án đúng!')
-        if (!answers[0].is_correct) return message.error('Đáp án duy nhất phải được đánh dấu là đúng!')
+        if (answers.length !== 1) return message.error('Text questions need exactly 1 answer!')
+        if (!answers[0].is_correct) return message.error('The answer must be marked correct!')
       }
 
-      const payload = { title, type, answers }
-      await setApi.createQuestion(Number(id), payload)
-      
-      message.success('Thêm câu hỏi thành công!')
+      if (editingQuestion) {
+        await questionApi.update(editingQuestion.id, { title, type, answers })
+        message.success(t.common_success)
+      } else {
+        await setApi.createQuestion(Number(id), { title, type, answers })
+        message.success(t.common_success)
+      }
+
       setQuestionModalOpen(false)
+      setEditingQuestion(null)
       qForm.resetFields()
       fetchData()
     } catch (error: any) {
-      if (error.response?.data?.message) {
-         message.error(error.response.data.message)
-      } else {
-         message.error('Lỗi thêm câu hỏi')
-      }
+      message.error(error.errorMessage || t.common_error)
     }
+  }
+
+  const openEditModal = (q: Question) => {
+    setEditingQuestion(q)
+    qForm.setFieldsValue({
+      title: q.title,
+      type: q.type,
+      answers: q.answers || []
+    })
+    setQuestionModalOpen(true)
   }
 
   const handleCreateQuiz = async (values: any) => {
     try {
-      await setApi.createQuiz(Number(id), {
+      const res = await setApi.createQuiz(Number(id), {
         title: values.title,
-        question_count: Number(values.question_count),
-        is_published: values.is_published
+        question_count: Math.min(Number(values.question_count), questions.length),
+        is_published: values.is_published,
       })
-      message.success('Tạo học phần (Quiz) thành công!')
+      message.success(t.common_success)
       setQuizModalOpen(false)
       quizForm.resetFields()
       fetchData()
+      const quizId = res.data?.data?.id
+      if (quizId) navigate(`/quizzes/${quizId}`)
     } catch (error: any) {
-      if (error.response?.data?.message) {
-         message.error(error.response.data.message)
-      } else {
-         message.error('Lỗi tạo học phần')
-      }
+      message.error(error.errorMessage || t.common_error)
     }
   }
 
   const deleteQuestion = async (qId: number) => {
     try {
       await questionApi.destroy(qId)
-      message.success('Xóa câu hỏi thành công')
+      message.success(t.common_success)
       fetchData()
     } catch {
-      message.error('Lỗi xóa')
+      message.error(t.common_error)
     }
   }
 
-  const qColumns = [
-    { title: 'Nội dung', dataIndex: 'content', key: 'content', render: (text: string) => <span style={{color: '#fff'}}>{text || '-'}</span> },
-    { title: 'Loại', dataIndex: 'type', key: 'type', render: (t: string) => <Tag color="blue">{t}</Tag> },
-    { title: 'Ngày tạo', dataIndex: 'created_at', key: 'created_at', render: (date: string) => <span style={{color: '#aaa'}}>{new Date(date).toLocaleDateString()}</span> },
-    { 
-      title: 'Hành động', 
-      key: 'actions',
-      render: (_: any, record: Question) => (
-        <Button danger icon={<DeleteOutlined />} size="small" onClick={() => deleteQuestion(record.id)} />
-      )
-    }
-  ]
+  const getTypeLabel = (type: string) => {
+    if (type === 'single') return t.qt_single
+    if (type === 'checkbox') return t.qt_checkbox
+    if (type === 'text') return t.qt_text
+    return type.toUpperCase()
+  }
 
-  const quizColumns = [
-    { title: 'Tên Học Phần', dataIndex: 'title', key: 'title', render: (t: string, r: Quiz) => <Link style={{color:'#9254de', fontWeight: 500}} to={`/quizzes/${r.id}`}>{t}</Link> },
-    { title: 'Số câu', dataIndex: 'question_count', key: 'count', render: (c: number) => <span style={{color: '#fff'}}>{c}</span> },
-    { title: 'Trạng thái', dataIndex: 'is_published', key: 'status', render: (p: boolean) => p ? <Tag color="success">Đã xuất bản</Tag> : <Tag color="warning">Bản nháp</Tag> },
-    { title: 'Ngày tạo', dataIndex: 'created_at', key: 'created_at', render: (date: string) => <span style={{color: '#aaa'}}>{new Date(date).toLocaleDateString()}</span> }
-  ]
+  const getTypeBadgeColor = (type: string) => {
+    if (type === 'single') return '#3d39cc'
+    if (type === 'checkbox') return '#a855f7'
+    return '#f59e0b'
+  }
 
-  if (!setInfo) return null
+  if (!setInfo) return (
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
+      {loading ? t.common_loading : 'Set not found'}
+    </div>
+  )
+
+  const previewQuestions = questions.slice(0, 5)
 
   return (
-    <div style={{ padding: '24px 0' }}>
-      <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/sets')} style={{ paddingLeft: 0, marginBottom: 16 }}>
-        Quay lại
-      </Button>
+    <div>
+      {/* Breadcrumb + Title */}
+      <div className="breadcrumb">
+        <Link to="/sets">{t.config_back}</Link>
+        <ChevronRight size={12} />
+        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{setInfo.title}</span>
+      </div>
 
-      <Card className="glass-card" bordered={false} style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <Title level={2} style={{ color: '#fff', marginBottom: 8 }}>{setInfo.title}</Title>
-            <Text style={{ color: '#aaa', fontSize: 16 }}>{setInfo.description || 'Không có mô tả'}</Text>
-            <div style={{ marginTop: 12 }}>
-               {setInfo.is_public ? <Tag color="blue">Công khai</Tag> : <Tag color="default">Riêng tư</Tag>}
-            </div>
-          </div>
-          <Space>
-             <Button type="primary" ghost icon={<PlayCircleOutlined />} onClick={() => setQuizModalOpen(true)}>
-               Tạo Quiz ngẫu nhiên
-             </Button>
-          </Space>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <h1 className="page-title">{t.config_title}</h1>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-outline" onClick={() => message.info('Draft saved!')}>
+            {t.config_saveDraft}
+          </button>
         </div>
-      </Card>
+      </div>
 
-      <Tabs 
-        defaultActiveKey="1" 
-        className="dark-tabs"
-        items={[
-          {
-            key: '1',
-            label: 'Danh sách Câu hỏi',
-            children: (
-              <Card className="glass-card table-dark" bordered={false}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <Title level={4} style={{ color: '#fff' }}>Ngân hàng ({questions.length})</Title>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => setQuestionModalOpen(true)}>Thêm câu hỏi</Button>
+      {/* Two-column layout */}
+      <div className="config-shell" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 24, alignItems: 'flex-start' }}>
+        {/* Left: Set Management (Primary) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Question List Area */}
+          <div className="config-panel">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BookOpen size={16} color="var(--primary)" />
+                <span style={{ fontWeight: 700, fontSize: 15 }}>Danh sách câu hỏi trong bộ học (Set)</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Eye size={13} color="var(--text-muted)" />
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, background: 'var(--bg)', padding: '3px 8px', borderRadius: 4 }}>
+                  {t.config_showingQuestions
+                    .replace('{shown}', String(previewQuestions.length))
+                    .replace('{total}', String(questions.length))}
+                </span>
+              </div>
+            </div>
+
+            {/* Add Question button */}
+            <button
+              className="btn btn-outline w-full"
+              style={{ marginBottom: 12, justifyContent: 'center', gap: 6, borderStyle: 'dashed' }}
+              onClick={() => setQuestionModalOpen(true)}
+            >
+              <Plus size={14} /> {t.config_addQuestion} (Set)
+            </button>
+
+            {/* Question preview cards */}
+            {loading ? (
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>{t.common_loading}</p>
+            ) : previewQuestions.length === 0 ? (
+              <div className="preview-question-card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                {t.config_noQuestions}
+              </div>
+            ) : (
+              previewQuestions.map((q) => (
+                <div key={q.id} className="preview-question-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, letterSpacing: 0.8,
+                      color: getTypeBadgeColor(q.type), textTransform: 'uppercase',
+                    }}>
+                      {getTypeLabel(q.type)}
+                    </span>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={() => openEditModal(q)}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => deleteQuestion(q.id)}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600, lineHeight: 1.4 }}>{q.title}</p>
                 </div>
-                <Table columns={qColumns} dataSource={questions} rowKey="id" loading={loading} />
-              </Card>
-            )
-          },
-          {
-            key: '2',
-            label: 'Học phần / Bài kiểm tra (Quizzes)',
-            children: (
-              <Card className="glass-card table-dark" bordered={false}>
-                 <Table columns={quizColumns} dataSource={quizzes} rowKey="id" loading={loading} />
-              </Card>
-            )
-          }
-        ]}
-      />
+              ))
+            )}
 
-      <Modal 
-        title="Thêm câu hỏi mới" 
-        open={isQuestionModalOpen} 
-        onCancel={() => setQuestionModalOpen(false)} 
-        footer={null} 
-        width={700}
-        className="dark-modal"
+            <button
+              className="btn btn-ghost"
+              style={{ width: '100%', justifyContent: 'center', marginTop: 12, color: 'var(--primary)', fontWeight: 600 }}
+              onClick={fetchData}
+            >
+              ↺ {t.config_regeneratePreview}
+            </button>
+          </div>
+
+          {/* Visibility & Sharing */}
+          <div className="config-panel">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+              <Share2 size={16} color="var(--primary)" />
+              <span style={{ fontWeight: 700, fontSize: 15 }}>{t.config_visibility}</span>
+            </div>
+
+            <div className="toggle-group" style={{ marginBottom: 20 }}>
+              <button className={`toggle-btn${!isPublic ? ' active' : ''}`} onClick={() => setIsPublic(false)}>
+                {t.config_private}
+              </button>
+              <button className={`toggle-btn${isPublic ? ' active' : ''}`} onClick={() => setIsPublic(true)}>
+                {t.config_public}
+              </button>
+            </div>
+
+            {isPublic && (
+              <>
+                <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>{t.config_addCollaborators}</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="form-input"
+                    placeholder={t.config_collaboratorPlaceholder}
+                    value={collaboratorInput}
+                    onChange={e => setCollaboratorInput(e.target.value)}
+                  />
+                  <button className="btn btn-primary btn-sm" onClick={() => setCollaboratorInput('')}>
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Quizzes section */}
+          <div className="config-panel">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{t.config_quizzes}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{quizzes.length}</span>
+            </div>
+            {quizzes.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{t.config_noQuizzes}</p>
+            ) : (
+              quizzes.map(quiz => (
+                <Link key={quiz.id} to={`/quizzes/${quiz.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 8,
+                    marginBottom: 8, background: 'white', transition: 'all 0.15s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                  >
+                    <div>
+                      <p style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text)' }}>{quiz.title}</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{quiz.question_count} {t.config_questions}</p>
+                    </div>
+                    <span className={`badge ${quiz.is_published ? 'badge-success' : 'badge-draft'}`}>
+                      {quiz.is_published ? t.config_published : t.config_draft}
+                    </span>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right: Quiz Generator (Secondary / Extraction Tool) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Setup Parameters */}
+          <div className="config-panel" style={{ border: '1px solid var(--primary-light)', background: 'rgba(61, 57, 204, 0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+              <Sparkles size={16} color="var(--primary)" />
+              <span style={{ fontWeight: 700, fontSize: 15 }}>{t.config_setupParams}</span>
+            </div>
+
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 20 }}>
+              Trích xuất một số lượng câu hỏi ngẫu nhiên từ bộ học này để tạo bài kiểm tra Quiz riêng.
+            </p>
+
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label className="form-label">{t.config_numberOfQuestions}</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <Slider
+                    min={questions.length > 0 ? 1 : 0}
+                    max={questions.length > 0 ? questions.length : 1}
+                    value={questions.length === 0 ? 0 : questionCount}
+                    onChange={setQuestionCount}
+                    disabled={questions.length === 0}
+                    trackStyle={{ background: 'var(--primary)' }}
+                    handleStyle={{ borderColor: 'var(--primary)', background: 'var(--primary)' }}
+                  />
+                </div>
+                <div style={{
+                  width: 46, height: 34, border: '1px solid var(--border)',
+                  borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: 14, color: 'var(--text)', flexShrink: 0,
+                }}>
+                  {questions.length === 0 ? 0 : questionCount}
+                </div>
+              </div>
+            </div>
+
+            <button
+              className="btn btn-primary w-full"
+              style={{ marginTop: 24 }}
+              onClick={() => {
+                quizForm.setFieldsValue({ question_count: questions.length === 0 ? 0 : Math.min(questionCount, questions.length) })
+                setQuizModalOpen(true)
+              }}
+              disabled={questions.length === 0}
+            >
+              <Plus size={13} /> {t.config_createQuiz}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Add Question Modal */}
+      <Modal
+        title={<span style={{ fontWeight: 700 }}>{editingQuestion ? t.config_editQuestion : t.config_addQuestion}</span>}
+        open={isQuestionModalOpen}
+        onCancel={() => { setQuestionModalOpen(false); setEditingQuestion(null); qForm.resetFields() }}
+        footer={null}
+        width={620}
       >
-         <Form 
-           form={qForm} 
-           layout="vertical" 
-           onFinish={handleCreateQuestion}
-           initialValues={{ 
-             type: 'single', 
-             answers: [{ content: '', is_correct: false }, { content: '', is_correct: false }] 
-           }}
-         >
-            <Form.Item name="title" label="Nội dung câu hỏi" rules={[{required:true, message: 'Vui lòng nhập nội dung!'}]}>
-              <Input.TextArea rows={3} placeholder="Nhập câu hỏi tại đây..." />
-            </Form.Item>
-            
-            <Form.Item name="type" label="Loại câu hỏi" rules={[{required:true}]}>
-              <Select onChange={(val) => {
-                const currentAnswers = qForm.getFieldValue('answers') || []
-                if (val === 'text' && currentAnswers.length !== 1) {
-                  qForm.setFieldsValue({ answers: [{ content: '', is_correct: true }] })
-                } else if (val !== 'text' && currentAnswers.length < 2) {
-                  qForm.setFieldsValue({ answers: [{ content: '', is_correct: false }, { content: '', is_correct: false }] })
-                }
-              }}>
-                <Option value="single">Một đáp án (Radio)</Option>
-                <Option value="checkbox">Nhiều đáp án (Checkbox)</Option>
-                <Option value="text">Văn bản (Tự luận / Điền từ)</Option>
-              </Select>
-            </Form.Item>
+        <Form
+          form={qForm}
+          layout="vertical"
+          onFinish={handleCreateQuestion}
+          initialValues={{ type: 'single', answers: [{ content: '', is_correct: false }, { content: '', is_correct: false }] }}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item name="title" label={t.ai_questionStatement} rules={[{ required: true }]}>
+            <Input.TextArea rows={3} placeholder="Enter question here..." />
+          </Form.Item>
 
-            <Form.Item label="Danh sách đáp án">
-              <Form.List name="answers">
-                {(fields, { add, remove }) => (
-                  <>
-                    {fields.map(({ key, name, ...restField }) => (
-                      <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'content']}
-                          rules={[{ required: true, message: 'Nhập đáp án!' }]}
-                        >
-                          <Input placeholder="Nội dung đáp án" style={{ width: 450 }} />
-                        </Form.Item>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'is_correct']}
-                          valuePropName="checked"
-                        >
-                          <Switch unCheckedChildren="Sai" checkedChildren="Đúng" />
-                        </Form.Item>
-                        {fields.length > 1 && qForm.getFieldValue('type') !== 'text' && (
-                          <MinusCircleOutlined onClick={() => remove(name)} style={{ color: '#ff4d4f' }} />
-                        )}
-                      </Space>
-                    ))}
-                    {qForm.getFieldValue('type') !== 'text' && (
-                      <Form.Item>
-                        <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                          Thêm phương án
-                        </Button>
+          <Form.Item name="type" label={t.ai_questionType} rules={[{ required: true }]}>
+            <select className="form-input" onChange={(e) => {
+              const val = e.target.value
+              if (val === 'text') qForm.setFieldsValue({ answers: [{ content: '', is_correct: true }] })
+              else if (qForm.getFieldValue('answers')?.length < 2) qForm.setFieldsValue({ answers: [{ content: '', is_correct: false }, { content: '', is_correct: false }] })
+            }}>
+              <option value="single">{t.qt_single}</option>
+              <option value="checkbox">{t.qt_checkbox}</option>
+              <option value="text">{t.qt_text}</option>
+            </select>
+          </Form.Item>
+
+          <Form.Item label={t.ai_answerOptions}>
+            <Form.List name="answers">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...rest }) => (
+                    <div key={key} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                      <Form.Item {...rest} name={[name, 'content']} rules={[{ required: true }]} style={{ flex: 1, marginBottom: 0 }}>
+                        <Input placeholder={`Answer ${key + 1}`} />
                       </Form.Item>
-                    )}
-                  </>
-                )}
-              </Form.List>
-            </Form.Item>
+                      <Form.Item {...rest} name={[name, 'is_correct']} valuePropName="checked" style={{ marginBottom: 0 }}>
+                        <Switch size="small" checkedChildren="✓" unCheckedChildren="✗" />
+                      </Form.Item>
+                      {fields.length > 1 && (
+                        <button type="button" onClick={() => remove(name)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
+                          <MinusCircle size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => add()} style={{ marginTop: 4, gap: 4 }}>
+                    <Plus size={12} /> Add option
+                  </button>
+                </>
+              )}
+            </Form.List>
+          </Form.Item>
 
-            <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
-              <Space>
-                <Button onClick={() => setQuestionModalOpen(false)}>Hủy</Button>
-                <Button type="primary" htmlType="submit">Lưu câu hỏi</Button>
-              </Space>
-            </Form.Item>
-         </Form>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-outline" onClick={() => { setQuestionModalOpen(false); qForm.resetFields() }}>
+              {t.common_cancel}
+            </button>
+            <button type="submit" className="btn btn-primary">
+              {t.common_save}
+            </button>
+          </div>
+        </Form>
       </Modal>
 
-      {/* Modal Create Quiz */}
-      <Modal title="Tạo Học phần (Quiz) từ bộ này" open={isQuizModalOpen} onCancel={() => setQuizModalOpen(false)} footer={null} className="dark-modal">
-         <Form form={quizForm} layout="vertical" onFinish={handleCreateQuiz}>
-            <Form.Item name="title" label="Tên bài kiểm tra" rules={[{required:true}]}>
-              <Input />
-            </Form.Item>
-            <Form.Item name="question_count" label="Số lượng câu hỏi (chọn ngẫu nhiên)" rules={[{required:true}]}>
-              <Input type="number" min={1} />
-            </Form.Item>
-            <Form.Item name="is_published" label="Xuất bản ngay?" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-            <Button type="primary" htmlType="submit" style={{width:'100%'}}>Tạo Bài</Button>
-         </Form>
+      {/* Create Quiz Modal */}
+      <Modal
+        title={<span style={{ fontWeight: 700 }}>{t.config_createQuiz}</span>}
+        open={isQuizModalOpen}
+        onCancel={() => { setQuizModalOpen(false); quizForm.resetFields() }}
+        footer={null}
+        width={440}
+      >
+        <Form form={quizForm} layout="vertical" onFinish={handleCreateQuiz} style={{ marginTop: 16 }}>
+          <Form.Item name="title" label={t.config_quizTitle} rules={[{ required: true }]}>
+            <Input placeholder="e.g. Midterm Practice Quiz" />
+          </Form.Item>
+          <Form.Item name="question_count" label={t.config_questionCount} rules={[{ required: true }]}>
+            <Input type="number" min={1} max={questions.length} />
+          </Form.Item>
+          <Form.Item name="is_published" label={t.config_publishNow} valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-outline" onClick={() => { setQuizModalOpen(false); quizForm.resetFields() }}>
+              {t.common_cancel}
+            </button>
+            <button type="submit" className="btn btn-primary">
+              <Play size={13} /> {t.config_startTest}
+            </button>
+          </div>
+        </Form>
       </Modal>
     </div>
   )
