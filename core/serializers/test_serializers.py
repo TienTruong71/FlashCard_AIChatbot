@@ -22,6 +22,23 @@ class TestSerializer(serializers.ModelSerializer):
             "submitted_at",
         ]
 
+
+class TestAnswerSerializer(serializers.ModelSerializer):
+    answer_id = serializers.IntegerField(source='selected_answer_id', read_only=True)
+    content = serializers.CharField(source='text_answer', read_only=True)
+
+    class Meta:
+        model = TestAnswer
+        fields = ['id', 'quiz_question', 'answer_id', 'content', 'is_correct']
+
+
+class TestRetrieveSerializer(TestSerializer):
+    answers = TestAnswerSerializer(many=True, read_only=True)
+
+    class Meta(TestSerializer.Meta):
+        fields = TestSerializer.Meta.fields + ['answers']
+
+
 class CreateTestSerializer(serializers.Serializer):
 
     quiz = serializers.IntegerField()

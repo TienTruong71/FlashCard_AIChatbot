@@ -17,6 +17,7 @@ from core.serializers.test_serializers import(
     CreateTestSerializer,
     AnswerTestSerializer,
     TestDetailResultSerializer,
+    TestRetrieveSerializer,
 )
 
 
@@ -83,6 +84,25 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
                 status=status.HTTP_201_CREATED,
             )
         return global_response_errors(serializer.errors)
+
+
+    def retrieve(self, request, pk=None):
+        pk, error_response = self.get_id(pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        test, error_response = self.get_test(pk=pk)
+        if error_response:
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = TestRetrieveSerializer(test)
+        return Response(
+            {
+                "status": True,
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
     @extend_schema(**start_test_document)
