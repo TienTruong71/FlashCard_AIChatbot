@@ -154,10 +154,36 @@ export const TestPage = () => {
         }
         if (tInfo) {
           const quizRes = await quizApi.retrieve(tInfo.quiz)
-          setQuizInfo(quizRes.data?.data as any)
+          const qData = quizRes.data?.data as (Quiz & { questions: QuizQuestion[] })
+          setQuizInfo(qData)
+
+          // Restore answers
+          const restoredAnswers: Record<number, any> = {}
+          tInfo.answers?.forEach(ans => {
+            if (ans.answer_ids && ans.answer_ids.length > 0) {
+              restoredAnswers[ans.quiz_question] = ans.answer_ids
+            } else if (ans.answer_id) {
+              restoredAnswers[ans.quiz_question] = ans.answer_id
+            } else if (ans.content) {
+              restoredAnswers[ans.quiz_question] = ans.content
+            }
+          })
+          setUserAnswers(restoredAnswers)
+
           if (isReview) {
             const resultRes = await testApi.results(Number(id))
             setTestResult(resultRes.data?.data)
+          } else {
+            // Find first unanswered question index
+            if (qData.questions) {
+              const firstUnanswered = qData.questions.findIndex(q => !restoredAnswers[q.id])
+              if (firstUnanswered !== -1) {
+                setCurrentIndex(firstUnanswered)
+              } else {
+                // All answered? Maybe stay at last one
+                setCurrentIndex(qData.questions.length - 1)
+              }
+            }
           }
         }
       } catch (error: any) {

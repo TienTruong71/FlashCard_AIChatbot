@@ -39,11 +39,15 @@ class TestSerializer(serializers.ModelSerializer):
 
 class TestAnswerSerializer(serializers.ModelSerializer):
     answer_id = serializers.IntegerField(source='selected_answer_id', read_only=True)
+    answer_ids = serializers.SerializerMethodField()
     content = serializers.CharField(source='text_answer', read_only=True)
 
     class Meta:
         model = TestAnswer
-        fields = ['id', 'quiz_question', 'answer_id', 'content', 'is_correct']
+        fields = ['id', 'quiz_question', 'answer_id', 'answer_ids', 'content', 'is_correct']
+
+    def get_answer_ids(self, obj):
+        return list(obj.selected_answers.values_list('id', flat=True))
 
 
 class TestRetrieveSerializer(TestSerializer):

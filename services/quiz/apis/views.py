@@ -348,8 +348,8 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
         filter_params = request.GET.dict()
-        queryset = Test.objects.filter(quiz=quiz).select_related("user")\
-            .prefetch_related("answers").order_by("id")
+        queryset = Test.objects.filter(quiz=quiz, user=request.user).select_related("user")\
+            .prefetch_related("answers").order_by("-id")
 
         tests = TestFilter(filter_params, queryset=queryset)
 

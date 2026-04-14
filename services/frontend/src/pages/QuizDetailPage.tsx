@@ -258,7 +258,7 @@ export const QuizDetailPage = () => {
     ? Math.round(completedTests.reduce((a, b) => a + (b.score || 0), 0) / completedTests.length)
     : 0
 
-  const inProgressTest = tests.find(t => t.score === null || t.score === undefined)
+  const inProgressTest = tests.find(t => t.status === 'pending' || t.status === 'in_progress')
 
   if (!quizInfo) return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>{loading ? t.common_loading : 'Quiz not found'}</div>
@@ -627,9 +627,9 @@ export const QuizDetailPage = () => {
                       {test.started_at ? new Date(test.started_at).toLocaleDateString() : 'N/A'}
                     </span>
                   </div>
-                  {test.score !== null && test.score !== undefined
-                    ? <span style={{ fontSize: 13, fontWeight: 700, color: test.score >= 70 ? 'var(--success)' : 'var(--warning)' }}>{test.score}đ</span>
-                    : <span className="badge badge-warning">In Progress</span>
+                  {test.status === 'submitted'
+                    ? <span style={{ fontSize: 13, fontWeight: 700, color: (test.score || 0) >= 70 ? 'var(--success)' : 'var(--warning)' }}>{test.score}đ</span>
+                    : <span className="badge badge-warning">{test.status === 'pending' ? 'Chưa bắt đầu' : 'Đang làm'}</span>
                   }
                 </div>
               ))}
