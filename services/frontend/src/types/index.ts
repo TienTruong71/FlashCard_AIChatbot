@@ -171,6 +171,7 @@ export interface TestAnswer {
   id: number
   quiz_question: number
   answer_id?: number
+  answer_ids?: number[]
   content?: string
   is_correct: boolean
 }
@@ -179,6 +180,7 @@ export interface Test {
   id: number
   quiz: number
   user: number
+  status: 'pending' | 'in_progress' | 'submitted' | 'cancelled'
   score?: number
   remaining_time?: number | null
   answers: TestAnswer[]

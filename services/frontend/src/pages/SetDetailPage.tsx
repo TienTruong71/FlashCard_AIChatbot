@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Form, Input, Switch, message, Modal, Slider, Space, Select } from 'antd'
+import { Form, Input, Switch, message, Modal, Slider, Space, Select, Pagination } from 'antd'
 import { setApi, questionApi } from '../api'
 import type { Set, Question, Quiz } from '../types'
 import { useLanguageStore } from '../store/languageStore'
@@ -39,16 +39,21 @@ export const SetDetailPage = () => {
   const [quizMode, setQuizMode] = useState<'random' | 'manual'>('random')
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([])
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
+  const [totalItems, setTotalItems] = useState(0)
+
   const [qForm] = Form.useForm()
   const [quizForm] = Form.useForm()
 
-  const fetchData = async () => {
+  const fetchData = async (page = currentPage, size = pageSize) => {
     if (!id) return
     setLoading(true)
     try {
       const [infoRes, qRes, quizRes] = await Promise.all([
         setApi.retrieve(Number(id)),
-        questionApi.list({ set: id }),
+        questionApi.list({ set: id, page, page_size: size }),
         setApi.listQuizzes(Number(id)),
       ])
       const setData = infoRes.data?.data
@@ -58,6 +63,7 @@ export const SetDetailPage = () => {
         setTitle(id, setData.title)
       }
       setQuestions(qRes.data?.data || [])
+      setTotalItems(qRes.data?.pagination?.total_items || 0)
       setQuizzes(quizRes.data?.data || [])
     } catch {
       message.error(t.common_error)
@@ -66,7 +72,7 @@ export const SetDetailPage = () => {
     }
   }
 
-  useEffect(() => { fetchData() }, [id])
+  useEffect(() => { fetchData(1, pageSize) }, [id])
 
   // Sync Slider value when questions load
   useEffect(() => {
@@ -211,7 +217,16 @@ export const SetDetailPage = () => {
     </div>
   )
 
-  const previewQuestions = questions.slice(0, 5)
+  const handlePageChange = (page: number, size?: number) => {
+    setCurrentPage(page)
+    if (size && size !== pageSize) {
+      setPageSize(size)
+      fetchData(1, size)
+      setCurrentPage(1)
+    } else {
+      fetchData(page, pageSize)
+    }
+  }
 
   return (
     <div>
@@ -249,13 +264,30 @@ export const SetDetailPage = () => {
                 <BookOpen size={16} color="var(--primary)" />
                 <span style={{ fontWeight: 700, fontSize: 15 }}>Danh sách câu hỏi trong bộ học (Set)</span>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Eye size={13} color="var(--text-muted)" />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, background: 'var(--bg)', padding: '3px 8px', borderRadius: 4 }}>
-                  {t.config_showingQuestions
-                    .replace('{shown}', String(previewQuestions.length))
-                    .replace('{total}', String(questions.length))}
-                </span>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Hiển thị:</span>
+                  <Select
+                    size="small"
+                    value={pageSize}
+                    onChange={(val) => handlePageChange(1, val)}
+                    style={{ width: 80 }}
+                    options={[
+                      { value: 5, label: '5' },
+                      { value: 10, label: '10' },
+                      { value: 20, label: '20' },
+                      { value: 50, label: '50' },
+                    ]}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <Eye size={13} color="var(--text-muted)" />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, background: 'var(--bg)', padding: '3px 8px', borderRadius: 4 }}>
+                    {t.config_showingQuestions
+                      .replace('{shown}', String(questions.length))
+                      .replace('{total}', String(totalItems))}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -271,12 +303,12 @@ export const SetDetailPage = () => {
             {/* Question preview cards */}
             {loading ? (
               <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>{t.common_loading}</p>
-            ) : previewQuestions.length === 0 ? (
+            ) : questions.length === 0 ? (
               <div className="preview-question-card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                 {t.config_noQuestions}
               </div>
             ) : (
-              previewQuestions.map((q) => (
+              questions.map((q) => (
                 <div key={q.id} className="preview-question-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                     <span style={{
@@ -305,10 +337,23 @@ export const SetDetailPage = () => {
               ))
             )}
 
+            {totalItems > pageSize && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20, marginBottom: 10 }}>
+                <Pagination
+                  current={currentPage}
+                  pageSize={pageSize}
+                  total={totalItems}
+                  onChange={handlePageChange}
+                  showSizeChanger={false}
+                  size="small"
+                />
+              </div>
+            )}
+
             <button
               className="btn btn-ghost"
               style={{ width: '100%', justifyContent: 'center', marginTop: 12, color: 'var(--primary)', fontWeight: 600 }}
-              onClick={fetchData}
+              onClick={() => fetchData(currentPage, pageSize)}
             >
               ↺ {t.config_regeneratePreview}
             </button>
