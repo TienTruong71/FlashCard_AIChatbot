@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
-import { ConfigProvider } from 'antd'
+import { ConfigProvider, theme as antdTheme } from 'antd'
 import './App.css'
 
 import { Sidebar } from './components/Sidebar'
@@ -17,6 +18,7 @@ import { TestPage } from './pages/TestPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 
 import { useLayoutStore } from './store/layoutStore'
+import { useThemeStore } from './store/themeStore'
 
 const MainLayout = () => {
   const { fullScreen } = useLayoutStore()
@@ -84,18 +86,27 @@ const router = createBrowserRouter([
 ])
 
 function App() {
+  const { theme } = useThemeStore()
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+
+  const isDark = theme === 'dark'
+
   return (
     <ConfigProvider
       theme={{
+        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: {
           colorPrimary: '#3d39cc',
-          colorBgContainer: '#ffffff',
+          colorBgContainer: isDark ? '#1e293b' : '#ffffff',
           borderRadius: 8,
           fontFamily: "'Inter', system-ui, sans-serif",
-          colorText: '#1e1e2d',
-          colorTextSecondary: '#6c6c89',
-          colorBorder: '#e5e5ec',
-          colorBgLayout: '#f8f8fc',
+          colorText: isDark ? '#f8fafc' : '#1e1e2d',
+          colorTextSecondary: isDark ? '#94a3b8' : '#6c6c89',
+          colorBorder: isDark ? '#334155' : '#e5e5ec',
+          colorBgLayout: isDark ? '#0f172a' : '#f8f8fc',
         },
       }}
     >

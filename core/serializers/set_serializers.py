@@ -7,6 +7,7 @@ from core.constant import PermissionEnum
 class SetSerializer(serializers.ModelSerializer):
 
     questions = QuestionSerializer(many=True, read_only=True)
+    question_count = serializers.IntegerField(source='questions.count', read_only=True)
     permission = serializers.SerializerMethodField()
 
     class Meta:
@@ -18,6 +19,7 @@ class SetSerializer(serializers.ModelSerializer):
             "is_public",
             "user",
             "questions",
+            "question_count",
             "permission",
             "created_at"
         ]

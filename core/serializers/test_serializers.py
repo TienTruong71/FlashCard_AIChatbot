@@ -160,6 +160,9 @@ class QuizQuestionResultSerializer(serializers.ModelSerializer):
 
 class TestDetailResultSerializer(serializers.ModelSerializer):  
     questions = serializers.SerializerMethodField()
+    correct_count = serializers.SerializerMethodField()
+    total_count = serializers.SerializerMethodField()
+    performance_by_type = serializers.SerializerMethodField()
 
     class Meta:
         model = Test
@@ -171,6 +174,9 @@ class TestDetailResultSerializer(serializers.ModelSerializer):
             "started_at",
             "submitted_at",
             "questions",
+            "correct_count",
+            "total_count",
+            "performance_by_type",
         ]
 
     def get_questions(self, obj):
@@ -180,3 +186,29 @@ class TestDetailResultSerializer(serializers.ModelSerializer):
             many=True,
             context={"test_id": obj.id}
         ).data
+
+    def get_correct_count(self, obj):
+        return obj.answers.filter(is_correct=True).count()
+
+    def get_total_count(self, obj):
+        return obj.quiz.quiz_questions.count()
+
+    def get_performance_by_type(self, obj):
+        results = {}
+        for qtype in QuestionTypeEnum:
+            questions = obj.quiz.quiz_questions.filter(type=qtype.value)
+            total = questions.count()
+            if total == 0:
+                continue
+            
+            correct = obj.answers.filter(
+                quiz_question__type=qtype.value,
+                is_correct=True
+            ).count()
+            
+            results[qtype.value] = {
+                "correct": correct,
+                "total": total,
+                "percentage": round((correct / total) * 100, 1) if total > 0 else 0
+            }
+        return results

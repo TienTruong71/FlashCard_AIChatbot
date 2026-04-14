@@ -66,6 +66,7 @@ export interface Set {
   user: number
   is_public: boolean
   permission?: 'view' | 'edit'
+  question_count?: number
   created_at: string
   updated_at: string
 }

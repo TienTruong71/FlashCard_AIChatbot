@@ -208,9 +208,9 @@ export const TestPage = () => {
     if (!testResult) return <div style={{ padding: 40, color: 'var(--text-muted)' }}>No result data.</div>
 
     const score = testResult.score ?? 0
-    const correct = testResult.correct ?? 0
-    const total = testResult.total ?? 0
-    const incorrect = total - correct
+    const correct = testResult.correct_count ?? testResult.correct ?? 0
+    const total = testResult.total_count ?? testResult.total ?? 0
+    const incorrect = Math.max(0, total - correct)
     const timeSec = testResult.time_spent ?? elapsed
 
     const performanceMsg = score >= 85
@@ -218,6 +218,18 @@ export const TestPage = () => {
       : score >= 60
         ? t.res_goodPerformance
         : t.res_needsImprovement
+
+    const analyticsData = testResult.performance_by_type 
+      ? Object.entries(testResult.performance_by_type).map(([key, value]: [string, any]) => ({
+          label: key === 'single' ? 'Single Choice' : key === 'checkbox' ? 'Checkbox' : 'Text Fill',
+          pct: value.percentage,
+          color: key === 'single' ? 'var(--primary)' : key === 'checkbox' ? 'var(--success)' : 'var(--warning)'
+        }))
+      : [
+          { label: 'Single Choice', pct: score, color: 'var(--primary)' },
+          { label: 'Checkbox', pct: score, color: 'var(--success)' },
+          { label: 'Text Fill', pct: score, color: 'var(--warning)' },
+        ]
 
     return (
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
@@ -246,7 +258,7 @@ export const TestPage = () => {
               {t.res_finalPerformance}
             </p>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 8 }}>
-              <span className="result-score-circle">{score}</span>
+              <span className="result-score-circle">{Math.round(score)}</span>
               <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--primary)', paddingBottom: 4 }}>đ</span>
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>{performanceMsg}</p>
@@ -299,17 +311,13 @@ export const TestPage = () => {
         {/* Performance Analytics */}
         <div className="card" style={{ padding: 24, marginBottom: 24 }}>
           <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 20 }}>{t.res_performanceAnalytics}</h3>
-          {[
-            { label: 'Multiple Choice', pct: Math.min(score + 5, 100), color: 'var(--primary)' },
-            { label: 'True / False', pct: 100, color: 'var(--success)' },
-            { label: 'Text Fill', pct: Math.max(score - 10, 0), color: 'var(--warning)' },
-          ].map(({ label, pct, color }) => (
+          {analyticsData.map(({ label, pct, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
               <span style={{ fontSize: 13, color: 'var(--text)', width: 130, flexShrink: 0 }}>{label}</span>
               <div className="progress-bar" style={{ flex: 1 }}>
                 <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color, width: 36, textAlign: 'right' }}>{pct}đ</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color, width: 36, textAlign: 'right' }}>{Math.round(pct)}đ</span>
             </div>
           ))}
         </div>

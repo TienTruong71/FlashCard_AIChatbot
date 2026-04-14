@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Modal, Input, Select, Space, message } from 'antd'
 import { setApi, testApi, quizApi } from '../api'
 import type { Set, Quiz, Test } from '../types'
 import { useAuthStore } from '../store/authStore'
@@ -23,6 +24,13 @@ export const DashboardPage = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [tests, setTests] = useState<Test[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Share states
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [shareItem, setShareItem] = useState<Set | Quiz | null>(null)
+  const [shareEmail, setShareEmail] = useState('')
+  const [sharePermission, setSharePermission] = useState<'view' | 'edit'>('view')
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,6 +64,27 @@ export const DashboardPage = () => {
 
   const hourOfDay = new Date().getHours()
   const greeting = hourOfDay < 12 ? 'Good morning' : hourOfDay < 18 ? 'Good afternoon' : 'Good evening'
+
+  const handleShare = async () => {
+    if (!shareItem || !shareEmail) return
+    setSharing(true)
+    try {
+
+      const payload = { shares: [{ email: shareEmail, permission: sharePermission }] }
+      if ('description' in shareItem || !('is_published' in shareItem)) {
+        await setApi.share(shareItem.id, payload)
+      } else {
+        await quizApi.share(shareItem.id, payload)
+      }
+      message.success(t.common_success)
+      setIsShareModalOpen(false)
+      setShareEmail('')
+    } catch (error: any) {
+      message.error(error.errorMessage || t.common_error)
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <div>
@@ -161,7 +190,7 @@ export const DashboardPage = () => {
               const Icon = SET_ICONS[i % SET_ICONS.length]
               const iconColor = SET_ICON_COLORS[i % SET_ICON_COLORS.length]
               return (
-                <Link key={set.id} to={`/sets/${set.id}`} style={{ textDecoration: 'none' }}>
+                <Link key={set.id} to={`/sets/${set.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div className="set-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                       <div className="set-card-icon" style={{ background: `${iconColor}15` }}>
@@ -179,9 +208,17 @@ export const DashboardPage = () => {
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <BookOpen size={12} /> {t.dash_questionsCount}
+                        <BookOpen size={12} /> {set.question_count || 0} {t.dash_questionsCount}
                       </span>
-                      <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setShareItem(set)
+                          setIsShareModalOpen(true)
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      >
                         <Share2 size={14} />
                       </button>
                     </div>
@@ -189,20 +226,6 @@ export const DashboardPage = () => {
                 </Link>
               )
             })}
-
-            {/* Create new card */}
-            {sets.length < 3 && (
-              <Link to="/sets" style={{ textDecoration: 'none' }}>
-                <div className="set-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 160, border: '2px dashed var(--border)' }}>
-                  <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
-                      <Plus size={20} color="var(--primary)" />
-                    </div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>{t.lib_createNew}</p>
-                  </div>
-                </div>
-              </Link>
-            )}
           </div>
         )}
       </div>
@@ -263,6 +286,39 @@ export const DashboardPage = () => {
           </Link>
         </div>
       </div>
+      {/* Share Modal */}
+      <Modal
+        title={<span style={{ fontWeight: 700 }}>{shareItem && ('description' in shareItem) ? 'Chia sẻ bộ học phần' : 'Chia sẻ Quiz'}</span>}
+        open={isShareModalOpen}
+        onCancel={() => setIsShareModalOpen(false)}
+        onOk={handleShare}
+        confirmLoading={sharing}
+        okText={t.ai_share || 'Chia sẻ'}
+        cancelText={t.ai_cancel || 'Hủy'}
+      >
+        <Space direction="vertical" style={{ width: '100%', marginTop: 10 }} size="middle">
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Email người dùng</p>
+            <Input
+              placeholder="Nhập email người muốn chia sẻ"
+              value={shareEmail}
+              onChange={e => setShareEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t.ai_permission || 'Quyền hạn'}</p>
+            <Select
+              style={{ width: '100%' }}
+              value={sharePermission}
+              onChange={val => setSharePermission(val)}
+              options={[
+                { value: 'view', label: t.ai_viewPermission || 'Chế độ xem' },
+                { value: 'edit', label: t.ai_editPermission || 'Có thể chỉnh sửa' },
+              ]}
+            />
+          </div>
+        </Space>
+      </Modal>
     </div>
   )
 }

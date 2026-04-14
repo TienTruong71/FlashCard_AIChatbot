@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Modal, Form, Input, Switch, message, Segmented, Select } from 'antd'
+import { Modal, Form, Input, Switch, message, Segmented, Select, Space, Pagination } from 'antd'
 import { setApi, quizApi } from '../api'
 import type { Set, Quiz } from '../types'
 import { useLanguageStore } from '../store/languageStore'
@@ -27,16 +27,35 @@ export const SetsPage = () => {
   const [ordering, setOrdering] = useState<string>('-created_at')
   const [form] = Form.useForm()
 
-  const fetchData = async () => {
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(12)
+  const [totalItems, setTotalItems] = useState(0)
+
+  // Share states
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [shareItem, setShareItem] = useState<Set | Quiz | null>(null)
+  const [shareEmail, setShareEmail] = useState('')
+  const [sharePermission, setSharePermission] = useState<'view' | 'edit'>('view')
+  const [sharing, setSharing] = useState(false)
+
+  const fetchData = async (page = currentPage, size = pageSize) => {
     setLoading(true)
     try {
-      const params = { q: searchText || undefined, ordering }
+      const params = {
+        q: searchText || undefined,
+        ordering,
+        page,
+        page_size: size
+      }
       if (activeTab === 'sets') {
         const res = await setApi.list(params)
         setSets(res.data?.data || [])
+        setTotalItems(res.data?.pagination?.total_items || 0)
       } else {
         const res = await quizApi.list(params)
         setQuizzes(res.data?.data || [])
+        setTotalItems(res.data?.pagination?.total_items || 0)
       }
     } catch {
       message.error(t.common_error)
@@ -59,17 +78,27 @@ export const SetsPage = () => {
     }
   }, [searchParams])
 
-  useEffect(() => { fetchData() }, [activeTab, ordering])
+  useEffect(() => {
+    setCurrentPage(1)
+    fetchData(1, pageSize)
+  }, [activeTab, ordering])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setSearchText(val)
+    setCurrentPage(1)
 
-    const params = { q: val || undefined, ordering }
+    const params = { q: val || undefined, ordering, page: 1, page_size: pageSize }
     if (activeTab === 'sets') {
-      setApi.list(params).then(res => setSets(res.data?.data || [])).catch(() => { })
+      setApi.list(params).then(res => {
+        setSets(res.data?.data || [])
+        setTotalItems(res.data?.pagination?.total_items || 0)
+      }).catch(() => { })
     } else {
-      quizApi.list(params).then(res => setQuizzes(res.data?.data || [])).catch(() => { })
+      quizApi.list(params).then(res => {
+        setQuizzes(res.data?.data || [])
+        setTotalItems(res.data?.pagination?.total_items || 0)
+      }).catch(() => { })
     }
   }
 
@@ -82,6 +111,26 @@ export const SetsPage = () => {
       fetchData()
     } catch (error: any) {
       message.error(error.errorMessage || t.common_error)
+    }
+  }
+
+  const handleShare = async () => {
+    if (!shareItem || !shareEmail) return
+    setSharing(true)
+    try {
+      const payload = { shares: [{ email: shareEmail, permission: sharePermission }] }
+      if (activeTab === 'sets') {
+        await setApi.share(shareItem.id, payload)
+      } else {
+        await quizApi.share(shareItem.id, payload)
+      }
+      message.success(t.common_success)
+      setIsShareModalOpen(false)
+      setShareEmail('')
+    } catch (error: any) {
+      message.error(error.errorMessage || t.common_error)
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -99,14 +148,14 @@ export const SetsPage = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
         {/* Row 1: Tab Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-          <button 
-            className={`tab-btn ${activeTab === 'sets' ? 'active' : ''}`} 
+          <button
+            className={`tab-btn ${activeTab === 'sets' ? 'active' : ''}`}
             onClick={() => setActiveTab('sets')}
           >
             {t.lib_mySets}
           </button>
-          <button 
-            className={`tab-btn ${activeTab === 'quizzes' ? 'active' : ''}`} 
+          <button
+            className={`tab-btn ${activeTab === 'quizzes' ? 'active' : ''}`}
             onClick={() => setActiveTab('quizzes')}
           >
             {t.lib_myQuizzes}
@@ -124,7 +173,7 @@ export const SetsPage = () => {
                 onChange={handleSearch}
               />
             </div>
-            
+
             <Select
               value={ordering}
               onChange={setOrdering}
@@ -168,7 +217,12 @@ export const SetsPage = () => {
             const iconColor = isSet ? SET_ICON_COLORS[i % SET_ICON_COLORS.length] : QUIZ_ICON_COLORS[i % QUIZ_ICON_COLORS.length]
 
             return (
-              <div key={item.id} className="set-card">
+              <Link
+                key={item.id}
+                to={isSet ? `/sets/${item.id}` : `/quizzes/${item.id}`}
+                style={{ textDecoration: 'none', color: 'inherit' }}
+                className="set-card"
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <div className="set-card-icon" style={{ background: `${iconColor}15` }}>
                     <Icon size={18} color={iconColor} />
@@ -192,57 +246,52 @@ export const SetsPage = () => {
                 </p>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <Link
-                      to={isSet ? `/sets/${item.id}` : `/quizzes/${item.id}`}
-                      className="btn btn-primary btn-sm"
-                      style={{ textDecoration: 'none' }}
-                    >
-                      {isSet ? t.lib_openSet : 'Xem chi tiết'}
-                    </Link>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    {isSet ? (
+                      <><BookOpen size={13} /> {item.question_count || 0} {t.config_questions}</>
+                    ) : (
+                      <><Sparkles size={13} /> {(item as Quiz).question_count || 0} {t.config_questions}</>
+                    )}
                   </div>
-                  <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setShareItem(item)
+                      setIsShareModalOpen(true)
+                    }}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                  >
                     <Share2 size={15} />
                   </button>
                 </div>
-              </div>
+              </Link>
             )
           })}
+        </div>
+      )}
 
-          {/* Add new card for Sets */}
-          {activeTab === 'sets' && (
-            <button
-              onClick={() => setIsModalVisible(true)}
-              style={{
-                border: '2px dashed var(--border)',
-                borderRadius: 14,
-                background: 'transparent',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                color: 'var(--text-muted)',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--primary)'
-                e.currentTarget.style.background = 'var(--primary-light)'
-                e.currentTarget.style.color = 'var(--primary)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border)'
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.color = 'var(--text-muted)'
-              }}
-            >
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'currentColor', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Plus size={16} color="white" />
-              </div>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>{t.lib_createNew}</span>
-            </button>
-          )}
+      {/* Pagination */}
+      {totalItems > 0 && (
+        <div style={{ marginTop: 32, display: 'flex', justifyContent: 'center' }}>
+          <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={totalItems}
+            onChange={(page, size) => {
+              setCurrentPage(page)
+              if (size !== pageSize) {
+                setPageSize(size)
+                fetchData(1, size)
+                setCurrentPage(1)
+              } else {
+                fetchData(page, size)
+              }
+            }}
+            showSizeChanger
+            showTotal={(total) => `Total ${total} items`}
+            hideOnSinglePage={false}
+          />
         </div>
       )}
 
@@ -273,6 +322,39 @@ export const SetsPage = () => {
             </button>
           </div>
         </Form>
+      </Modal>
+      {/* Share Modal */}
+      <Modal
+        title={<span style={{ fontWeight: 700 }}>{activeTab === 'sets' ? 'Chia sẻ bộ học phần' : 'Chia sẻ Quiz'}</span>}
+        open={isShareModalOpen}
+        onCancel={() => setIsShareModalOpen(false)}
+        onOk={handleShare}
+        confirmLoading={sharing}
+        okText={t.ai_share}
+        cancelText={t.ai_cancel}
+      >
+        <Space direction="vertical" style={{ width: '100%', marginTop: 10 }} size="middle">
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Email người dùng</p>
+            <Input
+              placeholder="Nhập email người muốn chia sẻ"
+              value={shareEmail}
+              onChange={e => setShareEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t.ai_permission}</p>
+            <Select
+              style={{ width: '100%' }}
+              value={sharePermission}
+              onChange={val => setSharePermission(val)}
+              options={[
+                { value: 'view', label: t.ai_viewPermission },
+                { value: 'edit', label: t.ai_editPermission },
+              ]}
+            />
+          </div>
+        </Space>
       </Modal>
     </div>
   )

@@ -8,9 +8,12 @@ import {
   LogOut,
   Plus,
   Languages,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useLanguageStore } from '../store/languageStore'
+import { useThemeStore } from '../store/themeStore'
 import { translations } from '../i18n'
 
 const navItems = [
@@ -23,7 +26,8 @@ export const Sidebar = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout, user } = useAuthStore()
-  const { language, toggle } = useLanguageStore()
+  const { language, toggle: toggleLang } = useLanguageStore()
+  const { theme, toggleTheme } = useThemeStore()
   const t = translations[language]
 
   const handleLogout = async () => {
@@ -66,18 +70,20 @@ export const Sidebar = () => {
 
       {/* Bottom */}
       <div className="sidebar-bottom">
-        {/* Create New Set */}
-        <Link to="/sets?create=true" className="sidebar-create-btn">
-          <Plus size={14} />
-          {t.nav_createNewSet}
-        </Link>
-
         {/* Language toggle */}
-        <button className="sidebar-lang-toggle" onClick={toggle}>
+        <button className="sidebar-lang-toggle" onClick={toggleLang}>
           <Languages size={13} />
           <span className="lang-badge">{language.toUpperCase()}</span>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
             {language === 'en' ? 'Switch to VI' : 'Chuyển EN'}
+          </span>
+        </button>
+
+        {/* Theme toggle */}
+        <button className="sidebar-lang-toggle" onClick={toggleTheme}>
+          {theme === 'light' ? <Moon size={13} /> : <Sun size={13} />}
+          <span style={{ fontSize: 11, marginLeft: 4, fontWeight: 600 }}>
+            {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
           </span>
         </button>
 

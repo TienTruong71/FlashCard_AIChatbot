@@ -333,7 +333,7 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
                     "score": score,
                     "correct": correct_count,
                     "total": total,
-                    "time spent": test.time_spent,
+                    "time_spent": test.time_spent,
                 },
                 "message": "Submitted successfully!"
             },
