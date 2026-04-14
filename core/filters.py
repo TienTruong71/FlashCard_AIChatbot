@@ -162,7 +162,7 @@ class TestFilter(filters.FilterSet):
 
     class Meta:
         model = Test
-        fields = []
+        fields = ["quiz", "status"]
 
     def filter_by_q(self, queryset, name, value):
         if value:

@@ -54,6 +54,9 @@ export const TopHeader = () => {
             to = '/sets?tab=quizzes'
           }
 
+          // Skip 'tests' breadcrumb segment - /tests has no page
+          if (value === 'tests') return null
+
           return (
             <div key={to} style={{ display: 'flex', alignItems: 'center' }}>
               <ChevronRight size={14} className="breadcrumb-separator" />

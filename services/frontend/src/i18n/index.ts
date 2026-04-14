@@ -188,7 +188,6 @@ export const translations = {
     test_submitQuiz: 'Submit',
     test_question: 'Question',
 
-    // Results
     res_history: 'HISTORY',
     res_quizCompletion: 'QUIZ COMPLETION',
     res_summary: 'Summary',
@@ -217,7 +216,7 @@ export const translations = {
     res_trueFalse: 'TRUE / FALSE',
     res_textFill: 'TEXT FILL',
 
-    // Auth
+
     auth_welcomeBack: 'Welcome back',
     auth_loginSubtitle: 'Sign in to continue your learning journey',
     auth_email: 'Email',

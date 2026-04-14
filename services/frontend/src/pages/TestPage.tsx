@@ -38,6 +38,7 @@ export const TestPage = () => {
   const [elapsed, setElapsed] = useState(0)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
+  const [pastAttempts, setPastAttempts] = useState<{id: number, score: number, submitted_at: string}[]>([])
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60)
@@ -173,6 +174,17 @@ export const TestPage = () => {
           if (isReview) {
             const resultRes = await testApi.results(Number(id))
             setTestResult(resultRes.data?.data)
+
+            // Fetch past attempts for score comparison
+            try {
+              const historyRes = await testApi.list({ quiz: tInfo.quiz, status: 'submitted', ordering: 'id', page_size: 10 } as any)
+              const allTests = historyRes.data?.data || []
+              setPastAttempts(allTests.filter((t: any) => t.score !== null).map((t: any) => ({
+                id: t.id,
+                score: Math.round(t.score),
+                submitted_at: t.submitted_at
+              })))
+            } catch { /* silent */ }
           } else {
             // Find first unanswered question index
             if (qData.questions) {
@@ -219,17 +231,17 @@ export const TestPage = () => {
         ? t.res_goodPerformance
         : t.res_needsImprovement
 
-    const analyticsData = testResult.performance_by_type 
+    const analyticsData = testResult.performance_by_type
       ? Object.entries(testResult.performance_by_type).map(([key, value]: [string, any]) => ({
-          label: key === 'single' ? 'Single Choice' : key === 'checkbox' ? 'Checkbox' : 'Text Fill',
-          pct: value.percentage,
-          color: key === 'single' ? 'var(--primary)' : key === 'checkbox' ? 'var(--success)' : 'var(--warning)'
-        }))
+        label: key === 'single' ? 'Single Choice' : key === 'checkbox' ? 'Checkbox' : 'Text Fill',
+        pct: value.percentage,
+        color: key === 'single' ? 'var(--primary)' : key === 'checkbox' ? 'var(--success)' : 'var(--warning)'
+      }))
       : [
-          { label: 'Single Choice', pct: score, color: 'var(--primary)' },
-          { label: 'Checkbox', pct: score, color: 'var(--success)' },
-          { label: 'Text Fill', pct: score, color: 'var(--warning)' },
-        ]
+        { label: 'Single Choice', pct: score, color: 'var(--primary)' },
+        { label: 'Checkbox', pct: score, color: 'var(--success)' },
+        { label: 'Text Fill', pct: score, color: 'var(--warning)' },
+      ]
 
     return (
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
@@ -294,16 +306,45 @@ export const TestPage = () => {
             </div>
           </div>
 
-          {/* Attempt snapshot */}
+          {/* Score History */}
           <div className="card" style={{ padding: 20 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>
-              {t.res_attemptSnapshot}
+              Score History
             </p>
-            <div style={{ height: 80, background: 'var(--bg)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <p style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-muted)', opacity: 0.4 }}>YOUR<br />WORK</p>
-            </div>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {t.res_sessionId}: #{testInfo?.id}
+            {pastAttempts.length > 0 ? (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 90 }}>
+                {pastAttempts.slice(-6).map((attempt, idx) => {
+                  const isCurrent = attempt.id === Number(id)
+                  const barHeight = Math.max(8, (attempt.score / 100) * 80)
+                  return (
+                    <div key={attempt.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: isCurrent ? 'var(--primary)' : 'var(--text-muted)' }}>
+                        {attempt.score}
+                      </span>
+                      <div style={{
+                        width: '100%',
+                        height: barHeight,
+                        borderRadius: '4px 4px 2px 2px',
+                        background: isCurrent
+                          ? 'linear-gradient(180deg, var(--primary), #6366f1)'
+                          : 'linear-gradient(180deg, var(--border), var(--border-light))',
+                        transition: 'all 0.3s ease',
+                        boxShadow: isCurrent ? '0 2px 8px rgba(61, 57, 204, 0.3)' : 'none',
+                      }} />
+                      <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 600 }}>
+                        #{idx + 1}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ height: 80, background: 'var(--bg)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>First attempt</p>
+              </div>
+            )}
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
+              Session #{testInfo?.id}
             </p>
           </div>
         </div>
@@ -317,7 +358,7 @@ export const TestPage = () => {
               <div className="progress-bar" style={{ flex: 1 }}>
                 <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color, width: 36, textAlign: 'right' }}>{Math.round(pct)}đ</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color, width: 46, textAlign: 'right' }}>{Math.round(pct)}%</span>
             </div>
           ))}
         </div>
@@ -329,9 +370,10 @@ export const TestPage = () => {
               <h3 style={{ fontWeight: 700, fontSize: 16 }}>{t.res_questionReview}</h3>
             </div>
             {quizInfo.questions.map((q, i) => {
-              // Find user's answer from testInfo
               const userAns = testInfo?.answers?.find(a => a.quiz_question === q.id)
               const isCorrect = userAns?.is_correct ?? false
+              const ptsPerQuestion = total > 0 ? Math.round((100 / total) * 10) / 10 : 0
+              const typeLabel = q.type === 'single' ? 'SINGLE CHOICE' : q.type === 'checkbox' ? 'CHECKBOX' : 'TEXT FILL'
               return (
                 <div key={q.id} className="question-review-card">
                   <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
@@ -343,7 +385,7 @@ export const TestPage = () => {
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 }}>
-                        QUESTION {String(i + 1).padStart(2, '0')} · {q.type === 'single' ? 'MULTIPLE CHOICE' : q.type === 'text' ? 'TEXT FILL' : 'MULTI SELECT'}
+                        QUESTION {String(i + 1).padStart(2, '0')} · {typeLabel}
                       </p>
                       <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500, lineHeight: 1.5, marginBottom: 14 }}>
                         {q.title}
@@ -376,8 +418,8 @@ export const TestPage = () => {
                         </div>
                       )}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: isCorrect ? 'var(--success)' : 'var(--danger)', flexShrink: 0 }}>
-                      {isCorrect ? '+10' : '0'} pts
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isCorrect ? 'var(--success)' : 'var(--danger)', flexShrink: 0, minWidth: 52, textAlign: 'right' }}>
+                      {isCorrect ? `+${ptsPerQuestion}` : '0'} đ
                     </span>
                   </div>
                 </div>
@@ -437,21 +479,15 @@ export const TestPage = () => {
               {remaining !== null ? formatTime(remaining) : formatTime(elapsed)}
             </span>
           </div>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => {
-              if (quizInfo?.allow_resuming === false) {
-                message.warning(t.test_resumeForbidden);
-              } else {
-                navigate(`/quizzes/${quizInfo?.id}`);
-              }
-            }}
-            disabled={quizInfo?.allow_resuming === false}
-            style={{ gap: 5, opacity: quizInfo?.allow_resuming === false ? 0.5 : 1 }}
-          >
-            <LogOut size={14} /> {t.test_leave}
-          </button>
-          <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 12 }}>U</div>
+          {quizInfo?.allow_resuming !== false && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => navigate(`/quizzes/${quizInfo?.id}`)}
+              style={{ gap: 5 }}
+            >
+              <LogOut size={14} /> {t.test_leave}
+            </button>
+          )}
         </div>
 
         {/* Progress bar */}
