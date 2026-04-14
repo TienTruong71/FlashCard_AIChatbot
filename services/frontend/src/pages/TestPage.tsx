@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { message } from 'antd'
 import { testApi, quizApi } from '../api'
 import type { Quiz, QuizQuestion, Test } from '../types'
@@ -8,11 +8,12 @@ import { useLanguageStore } from '../store/languageStore'
 import { translations } from '../i18n'
 import { useLayoutStore } from '../store/layoutStore'
 import {
-  Pause, ChevronLeft, ChevronRight, Clock,
+  LogOut, ChevronLeft, ChevronRight, Clock,
   CheckCircle2, XCircle, Star, Lightbulb,
-  Share2, Download,
+  Share2, Download, AlertTriangle,
   Flag, CheckCircle,
 } from 'lucide-react'
+import { useBlocker } from 'react-router-dom'
 
 // ─── Test Taking Page ────────────────────────────────────────────────────────
 export const TestPage = () => {
@@ -20,9 +21,41 @@ export const TestPage = () => {
   const [searchParams] = useSearchParams()
   const isReview = searchParams.get('review') === 'true'
   const navigate = useNavigate()
+  const location = useLocation()
   const { language } = useLanguageStore()
   const t = translations[language]
   const { setFullScreen } = useLayoutStore()
+
+  // Navigation blocker
+  const blocker = useBlocker(
+    ({ nextLocation }) =>
+      !isReview && 
+      quizInfo?.allow_resuming === false && 
+      !submitting &&
+      nextLocation.pathname !== location.pathname
+  );
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      if (window.confirm(t.test_leaveWarning)) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker, t.test_leaveWarning]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isReview && quizInfo?.allow_resuming === false && !submitting) {
+        e.preventDefault();
+        e.returnValue = t.test_leaveWarning;
+        return t.test_leaveWarning;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isReview, quizInfo, submitting, t.test_leaveWarning]);
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -35,6 +68,7 @@ export const TestPage = () => {
   const [showToast, setShowToast] = useState(false)
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set())
   const [elapsed, setElapsed] = useState(0)
+  const [remaining, setRemaining] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
 
   // Set full-screen mode (hides sidebar) only when taking (not reviewing)
@@ -46,9 +80,23 @@ export const TestPage = () => {
   // Timer
   useEffect(() => {
     if (isReview || paused) return
-    const timer = setInterval(() => setElapsed(p => p + 1), 1000)
+    const timer = setInterval(() => {
+      setElapsed(p => p + 1)
+      setRemaining(p => {
+        if (p === null) return null
+        // Trigger auto submit on exactly 0 via useEffect below
+        return p > 0 ? p - 1 : 0
+      })
+    }, 1000)
     return () => clearInterval(timer)
   }, [isReview, paused])
+
+  // Auto-submit when remaining time hits 0
+  useEffect(() => {
+    if (remaining === 0 && !submitting && !isReview) {
+      handleSubmit()
+    }
+  }, [remaining, submitting, isReview])
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60)
@@ -66,6 +114,9 @@ export const TestPage = () => {
         const testRes = await testApi.retrieve(Number(id))
         const tInfo = testRes.data?.data || null
         setTestInfo(tInfo)
+        if (tInfo?.remaining_time !== undefined) {
+          setRemaining(tInfo.remaining_time)
+        }
         if (tInfo) {
           const quizRes = await quizApi.retrieve(tInfo.quiz)
           setQuizInfo(quizRes.data?.data as any)
@@ -349,17 +400,24 @@ export const TestPage = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg)', padding: '6px 12px', borderRadius: 20 }}>
-            <Clock size={14} color="var(--primary)" />
-            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
-              {formatTime(elapsed)}
+            <Clock size={14} color={remaining !== null && remaining <= 60 ? 'var(--danger)' : 'var(--primary)'} />
+            <span style={{ fontWeight: 700, fontSize: 14, color: remaining !== null && remaining <= 60 ? 'var(--danger)' : 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+              {remaining !== null ? formatTime(remaining) : formatTime(elapsed)}
             </span>
           </div>
           <button
             className="btn btn-ghost btn-sm"
-            onClick={() => setPaused(p => !p)}
-            style={{ gap: 5 }}
+            onClick={() => {
+              if (quizInfo?.allow_resuming === false) {
+                message.warning(t.test_resumeForbidden);
+              } else {
+                navigate(`/sets/${quizInfo?.set}`);
+              }
+            }}
+            disabled={quizInfo?.allow_resuming === false}
+            style={{ gap: 5, opacity: quizInfo?.allow_resuming === false ? 0.5 : 1 }}
           >
-            <Pause size={14} /> {t.test_pause}
+            <LogOut size={14} /> {t.test_leave}
           </button>
           <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 12 }}>U</div>
         </div>
@@ -378,29 +436,33 @@ export const TestPage = () => {
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{answeredCount} / {totalQuestions}</span>
           </div>
           <div className="question-map-grid">
-            {quizInfo.questions.map((q, idx) => (
-              <button
-                key={q.id}
-                className={`q-map-btn${currentIndex === idx ? ' current' : ''}${userAnswers[q.id] !== undefined ? ' answered' : ''}`}
-                onClick={() => setCurrentIndex(idx)}
-              >
-                {idx + 1}
-              </button>
-            ))}
+            {quizInfo.questions.map((q, idx) => {
+              const status = markedForReview.has(idx) ? 'marked' : (userAnswers[q.id] !== undefined ? 'answered' : '');
+              return (
+                <button
+                  key={q.id}
+                  className={`q-map-btn ${currentIndex === idx ? 'current' : ''} ${status}`}
+                  onClick={() => setCurrentIndex(idx)}
+                >
+                  {idx + 1}
+                </button>
+              );
+            })}
           </div>
 
           {/* Legend */}
           <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {[
               { cls: 'answered', label: t.test_answered },
+              { cls: 'marked', label: t.test_markForReviewLegend },
               { cls: 'current', label: t.test_current },
               { cls: '', label: t.test_unanswered },
             ].map(({ cls, label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <div style={{
                   width: 12, height: 12, borderRadius: 3,
-                  background: cls === 'answered' ? 'var(--primary)' : 'transparent',
-                  border: `2px solid ${cls ? 'var(--primary)' : 'var(--border)'}`,
+                  background: cls === 'answered' ? 'var(--primary)' : (cls === 'marked' ? 'var(--warning)' : 'transparent'),
+                  border: `2px solid ${cls ? (cls === 'marked' ? 'var(--warning)' : 'var(--primary)') : 'var(--border)'}`,
                 }} />
                 <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</span>
               </div>

@@ -67,7 +67,7 @@ export const Sidebar = () => {
       {/* Bottom */}
       <div className="sidebar-bottom">
         {/* Create New Set */}
-        <Link to="/sets" className="sidebar-create-btn">
+        <Link to="/sets?create=true" className="sidebar-create-btn">
           <Plus size={14} />
           {t.nav_createNewSet}
         </Link>

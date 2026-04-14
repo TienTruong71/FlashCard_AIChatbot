@@ -121,6 +121,8 @@ export interface Quiz {
   user: number
   is_published: boolean
   question_count: number
+  time_limit: number | null
+  allow_resuming: boolean
   questions?: QuizQuestion[]
   created_at: string
   updated_at: string
@@ -134,6 +136,8 @@ export interface CreateQuizPayload {
 export interface UpdateQuizPayload {
   title?: string
   is_published?: boolean
+  time_limit?: number | null
+  allow_resuming?: boolean
 }
 
 export interface CreateQuizQuestionPayload {
@@ -169,6 +173,7 @@ export interface Test {
   quiz: number
   user: number
   score?: number
+  remaining_time?: number | null
   answers: TestAnswer[]
   created_at: string
 }

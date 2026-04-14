@@ -151,6 +151,8 @@ class Quiz(models.Model):
     title = models.CharField(max_length=255)
     question_count = models.IntegerField()
 
+    time_limit = models.IntegerField(null=True, blank=True)
+    allow_resuming = models.BooleanField(default=True)
     is_published = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { message } from 'antd'
+import { message, Popover } from 'antd'
 import { quizApi, testApi } from '../api'
 import type { Quiz, Test } from '../types'
 
@@ -8,7 +8,7 @@ import { useLanguageStore } from '../store/languageStore'
 import { translations } from '../i18n'
 import {
   Plus, Trash2, ChevronLeft,
-  CheckCircle2, Circle, AlignLeft, Clock3,
+  CheckCircle2, Circle, AlignLeft, Clock3, Clock,
   Play, ToggleLeft, ToggleRight,
   ListChecks, Trophy, ChevronRight, Sparkles, Save
 } from 'lucide-react'
@@ -161,7 +161,57 @@ export const QuizDetailPage = () => {
     }
   }
 
+  const toggleResuming = async () => {
+    if (!quizInfo) return
+    try {
+      const newValue = !quizInfo.allow_resuming
+      await quizApi.update(quizInfo.id, { allow_resuming: newValue })
+      setQuizInfo({ ...quizInfo, allow_resuming: newValue })
+      message.success('Đã cập nhật chế độ làm bài')
+    } catch {
+      message.error(t.common_error)
+    }
+  }
+
   const isLocked = quizInfo?.is_published
+
+  const handleTimeLimitUpdate = async (minutes: number | null) => {
+    if (!quizInfo || isLocked) return
+    let newLimit = quizInfo.time_limit === null ? 0 : quizInfo.time_limit
+    if (minutes === null) {
+      newLimit = 0
+    } else {
+      newLimit += minutes
+    }
+    const finalLimit = newLimit === 0 ? null : newLimit
+    
+    try {
+      await quizApi.update(quizInfo.id, { time_limit: finalLimit })
+      setQuizInfo({ ...quizInfo, time_limit: finalLimit })
+      message.success('Đã cập nhật thời gian')
+    } catch {
+      message.error(t.common_error)
+    }
+  }
+
+  const timeLimitContent = (
+    <div style={{ padding: 8, width: 200 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+        <button className="btn btn-outline btn-sm" onClick={() => handleTimeLimitUpdate(1)}>+1 {t.qt_minutes_suffix}</button>
+        <button className="btn btn-outline btn-sm" onClick={() => handleTimeLimitUpdate(5)}>+5 {t.qt_minutes_suffix}</button>
+        <button className="btn btn-outline btn-sm" onClick={() => handleTimeLimitUpdate(15)}>+15 {t.qt_minutes_suffix}</button>
+        <button className="btn btn-outline btn-sm" onClick={() => handleTimeLimitUpdate(60)}>+60 {t.qt_minutes_suffix}</button>
+      </div>
+      <button 
+        className="btn btn-ghost btn-sm" 
+        style={{ width: '100%', color: 'var(--danger)' }}
+        onClick={() => handleTimeLimitUpdate(null)}
+      >
+        {t.qt_unlimited}
+      </button>
+    </div>
+  )
+
 
 
   const completedTests = tests.filter(t => t.score !== null && t.score !== undefined)
@@ -187,13 +237,21 @@ export const QuizDetailPage = () => {
         <div style={{ flex: 1, paddingRight: 24 }}>
           <h1 className="page-title" style={{ marginBottom: 6 }}>{quizInfo.title}</h1>
           <p className="page-subtitle">
-            {quizInfo.question_count} {t.dash_questionsCount} · {quizInfo.is_published ? t.config_published : t.config_draft}
+            {quizInfo.question_count} {t.dash_questionsCount} · {quizInfo.is_published ? t.config_published : t.config_draft} · {quizInfo.time_limit ? `${quizInfo.time_limit} ${t.qt_minutes_suffix}` : t.qt_unlimited}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
           <button className="btn btn-outline" onClick={() => navigate(`/sets/${quizInfo.set}`)}>
             <ChevronLeft size={14} /> {t.ai_backToLibrary}
           </button>
+          {!isLocked && (
+            <Popover content={timeLimitContent} title={t.qt_timeLimit} trigger="click" placement="bottomRight">
+              <button className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Clock size={14} />
+                {quizInfo.time_limit ? `${quizInfo.time_limit} ${t.qt_mins}` : t.qt_unlimited}
+              </button>
+            </Popover>
+          )}
           {!isLocked && (
             <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
               {saving ? '...' : t.ai_saveSet}
@@ -403,6 +461,46 @@ export const QuizDetailPage = () => {
               </div>
             </div>
 
+            {/* Time limit info */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '12px 14px', borderRadius: 10, marginBottom: 12,
+              background: 'var(--bg)', border: '1px solid var(--border)'
+            }}>
+              <Clock size={16} color="var(--primary)" />
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
+                  {quizInfo?.time_limit ? `${quizInfo.time_limit} ${t.qt_minutes_suffix}` : t.qt_unlimited}
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {t.qt_timeLimit}
+                </p>
+              </div>
+            </div>
+
+            {/* Resume toggle */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '12px 14px', borderRadius: 10, marginBottom: 12,
+              background: quizInfo?.allow_resuming ? 'var(--bg)' : 'var(--warning-bg)',
+              border: `1px solid ${quizInfo?.allow_resuming ? 'var(--border)' : 'var(--warning)'}`
+            }}>
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
+                  {t.config_allowResuming}
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {quizInfo?.allow_resuming ? 'Có thể thoát và làm tiếp' : 'Bắt buộc làm một mạch'}
+                </p>
+              </div>
+              <div onClick={toggleResuming} style={{ cursor: 'pointer', display: 'flex' }}>
+                {quizInfo?.allow_resuming
+                  ? <ToggleRight size={22} color="var(--primary)" />
+                  : <ToggleLeft size={22} color="var(--text-muted)" />
+                }
+              </div>
+            </div>
+
             {/* Stats grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               <div style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--border)', textAlign: 'center' }}>
@@ -421,7 +519,7 @@ export const QuizDetailPage = () => {
                 <Trophy size={16} color="var(--warning)" />
                 <div>
                   <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Điểm trung bình</p>
-                  <p style={{ fontSize: 16, fontWeight: 800, color: avgScore >= 70 ? 'var(--success)' : 'var(--warning)' }}>{avgScore}%</p>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: avgScore >= 70 ? 'var(--success)' : 'var(--warning)' }}>{avgScore}đ</p>
                 </div>
               </div>
             )}
@@ -469,7 +567,7 @@ export const QuizDetailPage = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{t.ai_knowledgeCoverage}</p>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>{Math.min(avgScore || 12, 100)}%</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>{Math.min(avgScore || 12, 100)}đ</p>
               </div>
               <div style={{ height: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 10, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${Math.min(avgScore || 12, 100)}%`, background: 'var(--success)', borderRadius: 10 }} />
@@ -491,7 +589,7 @@ export const QuizDetailPage = () => {
                       </span>
                     </div>
                     {test.score !== null && test.score !== undefined
-                      ? <span style={{ fontSize: 13, fontWeight: 700, color: test.score >= 70 ? 'var(--success)' : 'var(--warning)' }}>{test.score}%</span>
+                      ? <span style={{ fontSize: 13, fontWeight: 700, color: test.score >= 70 ? 'var(--success)' : 'var(--warning)' }}>{test.score}đ</span>
                       : <span className="badge badge-warning">In Progress</span>
                     }
                   </div>

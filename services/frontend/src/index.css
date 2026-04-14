@@ -713,6 +713,7 @@ body { margin: 0; background: var(--bg); }
 }
 
 .q-map-btn.answered { background: var(--primary); border-color: var(--primary); color: white; }
+.q-map-btn.marked { border-color: var(--warning); color: var(--warning); background: var(--warning-bg); }
 .q-map-btn.current { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
 .q-map-btn:hover { border-color: var(--primary); }
 

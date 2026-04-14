@@ -140,13 +140,21 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
         answered_question_ids = test.answers.values_list("quiz_question_id", flat=True)
         next_question = test.quiz.quiz_questions.exclude(id__in=answered_question_ids).order_by("id").first()
 
+        remaining_time = None
+        if test.quiz.time_limit is not None:
+            total_limit_seconds = test.quiz.time_limit * 60
+            time_spent = test.time_spent
+            if test.current_session_start:
+                time_spent += int((timezone.now() - test.current_session_start).total_seconds())
+            remaining_time = max(0, total_limit_seconds - time_spent)
+
         return Response(
             {
                 "status": True,
                 "data" : {
                     "started_at": test.started_at,
                     "current_question": {"id": next_question.id, "title": next_question.title} if next_question else None,
-                    "remaining_time": 3600
+                    "remaining_time": remaining_time
                 },
                 "message": "Test resumed/started successfully!"
             },

@@ -18,7 +18,7 @@ export const translations = {
     // Dashboard
     dash_welcomeBack: 'WELCOME BACK',
     dash_readyForDeepWork: 'Ready to fight Quiz?',
-    dash_newAiCapabilities: '✦ NEW AI CAPABILITIES',
+    dash_newAiCapabilities: 'NEW AI CAPABILITIES',
     dash_heroTitle: 'Transform notes into quizzes instantly.',
     dash_heroDesc: 'Upload PDFs, lecture slides, or paste raw text. Our AI generates comprehensive flashcards in seconds.',
     dash_aiUpload: 'AI Upload',
@@ -105,12 +105,18 @@ export const translations = {
     config_viewQuiz: 'View Quiz',
     config_published: 'Published',
     config_draft: 'Draft',
+    config_allowResuming: 'Allow Resuming',
+    config_resumeDescription: 'If disabled, users cannot leave the test once started.',
 
     // Question types
     qt_single: 'MULTIPLE CHOICE',
     qt_checkbox: 'MULTI SELECT',
     qt_text: 'TEXT FILL',
     qt_trueFalse: 'TRUE / FALSE',
+    qt_timeLimit: 'Time Limit',
+    qt_unlimited: 'Unlimited',
+    qt_minutes_suffix: 'mins',
+    qt_mins: 'm',
 
     // AI Generator
     ai_title: 'AI Generator',
@@ -140,11 +146,16 @@ export const translations = {
 
     // Test page
     test_pause: 'Pause',
+    test_leave: 'Leave Quiz',
     test_cancel: 'Cancel',
     test_questionMap: 'Question Map',
     test_answered: 'Answered',
     test_current: 'Current',
     test_unanswered: 'Unanswered',
+    test_marked: 'Marked',
+    test_markForReviewLegend: 'Marked for Review',
+    test_resumeForbidden: 'Resuming is not allowed for this quiz.',
+    test_leaveWarning: 'Are you sure you want to leave? Your progress will be saved but you cannot return to this attempt.',
     test_difficulty: 'DIFFICULTY',
     test_easy: 'EASY',
     test_medium: 'MEDIUM',
@@ -289,7 +300,7 @@ export const translations = {
     // Dashboard
     dash_welcomeBack: 'CHÀO MỪNG TRỞ LẠI',
     dash_readyForDeepWork: 'Sẵn sàng chiến Quiz chưa nào?',
-    dash_newAiCapabilities: '✦ TÍNH NĂNG AI MỚI',
+    dash_newAiCapabilities: 'TÍNH NĂNG AI MỚI',
     dash_heroTitle: 'Chuyển ghi chú thành quiz ngay lập tức.',
     dash_heroDesc: 'Tải lên PDF, slide bài giảng, hoặc dán văn bản. AI tạo flashcard toàn diện trong vài giây.',
     dash_aiUpload: 'Tải lên AI',
@@ -376,12 +387,18 @@ export const translations = {
     config_viewQuiz: 'Xem Quiz',
     config_published: 'Đã xuất bản',
     config_draft: 'Bản nháp',
+    config_allowResuming: 'Cho phép quay lại làm tiếp',
+    config_resumeDescription: 'Nếu tắt, người dùng không thể thoát bài thi khi đã bắt đầu.',
 
     // Question types
     qt_single: 'TRẮC NGHIỆM',
     qt_checkbox: 'NHIỀU ĐÁP ÁN',
     qt_text: 'ĐIỀN TỪ',
     qt_trueFalse: 'ĐÚNG / SAI',
+    qt_timeLimit: 'Thời gian làm bài',
+    qt_unlimited: 'Vô hạn',
+    qt_minutes_suffix: 'phút',
+    qt_mins: 'p',
 
     // AI Generator
     ai_title: 'AI Generator',
@@ -411,11 +428,16 @@ export const translations = {
 
     // Test page
     test_pause: 'Tạm dừng',
+    test_leave: 'Rời khỏi',
     test_cancel: 'Hủy',
     test_questionMap: 'Bản đồ câu hỏi',
     test_answered: 'Đã trả lời',
     test_current: 'Đang xem',
     test_unanswered: 'Chưa trả lời',
+    test_marked: 'Đã đánh dấu',
+    test_markForReviewLegend: 'Đánh dấu xem lại',
+    test_resumeForbidden: 'Bài thi này không cho phép quay lại làm tiếp.',
+    test_leaveWarning: 'Bạn có chắc chắn muốn rời khỏi? Tiến độ sẽ được lưu nhưng bạn không thể quay lại làm tiếp bài thi này.',
     test_difficulty: 'ĐỘ KHÓ',
     test_easy: 'DỄ',
     test_medium: 'TRUNG BÌNH',

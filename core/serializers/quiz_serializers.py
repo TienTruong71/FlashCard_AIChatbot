@@ -37,6 +37,8 @@ class QuizSerializer(serializers.ModelSerializer):
             "set",
             "question_count",
             "is_published",
+            "time_limit",
+            "allow_resuming",
             "created_at",
         ]
 
@@ -53,6 +55,8 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             "question_count",
             "questions",
             "is_published",
+            "time_limit",
+            "allow_resuming",
             "created_at",
         ]
 
@@ -104,12 +108,16 @@ class UpdateQuizSerializer(serializers.ModelSerializer):
     )
     
     is_published = serializers.BooleanField(required=False)
+    time_limit = serializers.IntegerField(required=False, allow_null=True)
+    allow_resuming = serializers.BooleanField(required=False)
 
     class Meta:
         model = Quiz
         fields = [
             "title",
             "is_published",
+            "time_limit",
+            "allow_resuming",
         ]
 
 

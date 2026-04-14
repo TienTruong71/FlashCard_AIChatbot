@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
+from django.utils import timezone
 from core.models import Test, Quiz, TestAnswer, QuizQuestion
 from core.serializers.quiz_serializers import QuizQuestionAnswerSerializer
 from core.constant import TestStatusEnum, QuestionTypeEnum
@@ -7,6 +8,7 @@ from core.constant import TestStatusEnum, QuestionTypeEnum
 
 
 class TestSerializer(serializers.ModelSerializer):
+    remaining_time = serializers.SerializerMethodField()
 
     class Meta:
         model = Test
@@ -20,7 +22,19 @@ class TestSerializer(serializers.ModelSerializer):
             "started_at",
             "last_answered_at",
             "submitted_at",
+            "remaining_time",
         ]
+
+    def get_remaining_time(self, obj):
+        if not obj.quiz or obj.quiz.time_limit is None:
+            return None
+            
+        total_limit_seconds = obj.quiz.time_limit * 60
+        time_spent = obj.time_spent
+        if obj.status == TestStatusEnum.IN_PROGRESS.value and obj.current_session_start:
+            time_spent += int((timezone.now() - obj.current_session_start).total_seconds())
+            
+        return max(0, total_limit_seconds - time_spent)
 
 
 class TestAnswerSerializer(serializers.ModelSerializer):
