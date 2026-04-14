@@ -103,7 +103,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
             return Response(
                 {
                     "status":True,
-                    "data":QuizSerializer(quiz).data,
+                    "data":QuizSerializer(quiz, context={'request': request}).data,
                     "message": "Quiz updated successfully!"
                 },
                 status=status.HTTP_200_OK
@@ -121,7 +121,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = QuizDetailSerializer(quiz)
+        serializer = QuizDetailSerializer(quiz, context={'request': request})
         return Response(
             {
                 "status": True,

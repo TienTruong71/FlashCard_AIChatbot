@@ -67,7 +67,7 @@ export const AnalyticsPage = () => {
             <CheckCircle2 size={18} color="var(--success)" />
           </div>
           <span className="stat-value" style={{ color: avgScore >= 70 ? 'var(--success)' : avgScore >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
-            {avgScore}%
+            {avgScore}đ
           </span>
           <span className="stat-label">{t.analytics_avgScore}</span>
         </div>
@@ -75,7 +75,7 @@ export const AnalyticsPage = () => {
           <div style={{ width: 38, height: 38, background: 'rgba(251,191,36,0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
             <Trophy size={18} color="#f59e0b" />
           </div>
-          <span className="stat-value" style={{ color: '#f59e0b' }}>{bestScore}%</span>
+          <span className="stat-value" style={{ color: '#f59e0b' }}>{bestScore}đ</span>
           <span className="stat-label">{t.analytics_bestScore}</span>
         </div>
       </div>
@@ -96,9 +96,9 @@ export const AnalyticsPage = () => {
                       borderRadius: '4px 4px 0 0',
                       transition: 'all 0.3s',
                     }}
-                    title={`${test.score}%`}
+                    title={`${test.score}đ`}
                   />
-                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{test.score}%</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{test.score}đ</span>
                 </div>
               )
             })}
@@ -136,13 +136,13 @@ export const AnalyticsPage = () => {
                     {quiz?.title || `Quiz #${test.quiz}`}
                   </span>
                   <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Clock size={12} /> {new Date(test.created_at).toLocaleDateString()}
+                    <Clock size={12} /> {new Date(test.started_at).toLocaleDateString()}
                   </span>
                   <span className={`badge ${isDone ? 'badge-success' : 'badge-warning'}`}>
                     {isDone ? t.analytics_completed : t.analytics_pending}
                   </span>
                   <span style={{ fontWeight: 700, fontSize: 14, color: isDone ? (test.score! >= 70 ? 'var(--success)' : 'var(--warning)') : 'var(--text-muted)' }}>
-                    {isDone ? `${test.score}%` : '—'}
+                    {isDone ? `${test.score}đ` : '—'}
                   </span>
                   <Link
                     to={isDone ? `/tests/${test.id}?review=true` : `/tests/${test.id}`}

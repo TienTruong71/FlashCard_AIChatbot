@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.db import transaction
-from core.models import Quiz, QuizQuestion, QuizQuestionAnswer
-from core.constant import QuestionTypeEnum
+from core.models import Quiz, QuizQuestion, QuizQuestionAnswer, QuizShare
+from core.constant import QuestionTypeEnum, PermissionEnum
 
 
 class QuizQuestionAnswerSerializer(serializers.ModelSerializer):
@@ -35,6 +35,7 @@ class QuizSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "set",
+            "user",
             "question_count",
             "is_published",
             "time_limit",
@@ -46,19 +47,39 @@ class QuizSerializer(serializers.ModelSerializer):
 class QuizDetailSerializer(serializers.ModelSerializer):
 
     questions = QuizQuestionSerializer(many=True, source="quiz_questions")
+    permission = serializers.SerializerMethodField()
+    set_title = serializers.ReadOnlyField(source='set.title')
+
     class Meta:
         model = Quiz
         fields = [
             "id",
             "title",
             "set",
+            "set_title",
+            "user",
             "question_count",
             "questions",
             "is_published",
             "time_limit",
             "allow_resuming",
+            "permission",
             "created_at",
         ]
+
+    def get_permission(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        
+        if obj.user == request.user:
+            return "edit"
+        
+        share = QuizShare.objects.filter(quiz=obj, user=request.user).first()
+        if share:
+            return share.permission
+        
+        return None
 
 
 class CreateQuizSerializer(serializers.ModelSerializer):

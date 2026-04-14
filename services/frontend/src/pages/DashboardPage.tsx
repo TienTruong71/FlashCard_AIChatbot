@@ -120,7 +120,7 @@ export const DashboardPage = () => {
               <TrendingUp size={18} color="var(--success)" />
             </div>
             <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--success-bg)', color: 'var(--success)', padding: '2px 8px', borderRadius: 20 }}>
-              +{weeklyScore}%
+              +{weeklyScore}đ
             </span>
           </div>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
@@ -236,7 +236,7 @@ export const DashboardPage = () => {
                     </div>
                     {score !== null && score !== undefined && (
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: 16, fontWeight: 800, color: score >= 70 ? 'var(--success)' : 'var(--warning)' }}>{score}%</p>
+                        <p style={{ fontSize: 16, fontWeight: 800, color: score >= 70 ? 'var(--success)' : 'var(--warning)' }}>{score}đ</p>
                         <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{t.dash_mastery}</p>
                       </div>
                     )}

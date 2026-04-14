@@ -5,6 +5,7 @@ import { Bell, Settings, Plus, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { notificationApi } from '../api'
 import { useLanguageStore } from '../store/languageStore'
+import { useBreadcrumbStore } from '../store/breadcrumbStore'
 import { translations } from '../i18n'
 
 export const TopHeader = () => {
@@ -34,6 +35,8 @@ export const TopHeader = () => {
     tests: t.test_breadcrumb
   }
 
+  const { titles } = useBreadcrumbStore()
+  
   return (
     <header className="top-header">
       {/* Breadcrumbs */}
@@ -44,7 +47,8 @@ export const TopHeader = () => {
         {pathnames.map((value, index) => {
           const last = index === pathnames.length - 1
           let to = `/${pathnames.slice(0, index + 1).join('/')}`
-          const label = breadcrumbMap[value] || (value.length > 10 ? 'Detail' : value)
+          
+          let label = breadcrumbMap[value] || titles[value] || (value.length > 10 ? 'Detail' : value)
           
           if (to === '/quizzes') {
             to = '/sets?tab=quizzes'

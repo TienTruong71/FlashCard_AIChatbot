@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { ConfigProvider } from 'antd'
 import './App.css'
 
@@ -34,6 +34,55 @@ const MainLayout = () => {
   )
 }
 
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <LandingPage />,
+  },
+  {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
+    path: '/register',
+    element: <RegisterPage />,
+  },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <MainLayout />,
+        children: [
+          {
+            path: '/dashboard',
+            element: <DashboardPage />,
+          },
+          {
+            path: '/sets',
+            element: <SetsPage />,
+          },
+          {
+            path: '/sets/:id',
+            element: <SetDetailPage />,
+          },
+          {
+            path: '/quizzes/:id',
+            element: <QuizDetailPage />,
+          },
+          {
+            path: '/analytics',
+            element: <AnalyticsPage />,
+          },
+          {
+            path: '/tests/:id',
+            element: <TestPage />,
+          },
+        ],
+      },
+    ],
+  },
+])
+
 function App() {
   return (
     <ConfigProvider
@@ -50,24 +99,7 @@ function App() {
         },
       }}
     >
-      <Router>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-
-          <Route element={<ProtectedRoute />}>
-            <Route element={<MainLayout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/sets" element={<SetsPage />} />
-              <Route path="/sets/:id" element={<SetDetailPage />} />
-              <Route path="/quizzes/:id" element={<QuizDetailPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/tests/:id" element={<TestPage />} />
-            </Route>
-          </Route>
-        </Routes>
-      </Router>
+      <RouterProvider router={router} />
     </ConfigProvider>
   )
 }

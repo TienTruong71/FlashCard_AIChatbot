@@ -65,6 +65,7 @@ export interface Set {
   description?: string
   user: number
   is_public: boolean
+  permission?: 'view' | 'edit'
   created_at: string
   updated_at: string
 }
@@ -124,6 +125,8 @@ export interface Quiz {
   time_limit: number | null
   allow_resuming: boolean
   questions?: QuizQuestion[]
+  permission?: 'view' | 'edit'
+  set_title?: string
   created_at: string
   updated_at: string
 }
@@ -175,7 +178,7 @@ export interface Test {
   score?: number
   remaining_time?: number | null
   answers: TestAnswer[]
-  created_at: string
+  started_at: string
 }
 
 export interface CreateTestPayload {

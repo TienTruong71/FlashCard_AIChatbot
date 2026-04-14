@@ -15,7 +15,6 @@ import {
 } from 'lucide-react'
 import { useBlocker } from 'react-router-dom'
 
-// ─── Test Taking Page ────────────────────────────────────────────────────────
 export const TestPage = () => {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
@@ -25,37 +24,6 @@ export const TestPage = () => {
   const { language } = useLanguageStore()
   const t = translations[language]
   const { setFullScreen } = useLayoutStore()
-
-  // Navigation blocker
-  const blocker = useBlocker(
-    ({ nextLocation }) =>
-      !isReview && 
-      quizInfo?.allow_resuming === false && 
-      !submitting &&
-      nextLocation.pathname !== location.pathname
-  );
-
-  useEffect(() => {
-    if (blocker.state === 'blocked') {
-      if (window.confirm(t.test_leaveWarning)) {
-        blocker.proceed();
-      } else {
-        blocker.reset();
-      }
-    }
-  }, [blocker, t.test_leaveWarning]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!isReview && quizInfo?.allow_resuming === false && !submitting) {
-        e.preventDefault();
-        e.returnValue = t.test_leaveWarning;
-        return t.test_leaveWarning;
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isReview, quizInfo, submitting, t.test_leaveWarning]);
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -71,68 +39,11 @@ export const TestPage = () => {
   const [remaining, setRemaining] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
 
-  // Set full-screen mode (hides sidebar) only when taking (not reviewing)
-  useEffect(() => {
-    setFullScreen(!isReview)
-    return () => setFullScreen(false)
-  }, [isReview, setFullScreen])
-
-  // Timer
-  useEffect(() => {
-    if (isReview || paused) return
-    const timer = setInterval(() => {
-      setElapsed(p => p + 1)
-      setRemaining(p => {
-        if (p === null) return null
-        // Trigger auto submit on exactly 0 via useEffect below
-        return p > 0 ? p - 1 : 0
-      })
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [isReview, paused])
-
-  // Auto-submit when remaining time hits 0
-  useEffect(() => {
-    if (remaining === 0 && !submitting && !isReview) {
-      handleSubmit()
-    }
-  }, [remaining, submitting, isReview])
-
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60)
     const sec = s % 60
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
   }
-
-  useEffect(() => {
-    const init = async () => {
-      try {
-        setLoading(true)
-        if (!isReview) {
-          try { await testApi.start(Number(id)) } catch { /* already started */ }
-        }
-        const testRes = await testApi.retrieve(Number(id))
-        const tInfo = testRes.data?.data || null
-        setTestInfo(tInfo)
-        if (tInfo?.remaining_time !== undefined) {
-          setRemaining(tInfo.remaining_time)
-        }
-        if (tInfo) {
-          const quizRes = await quizApi.retrieve(tInfo.quiz)
-          setQuizInfo(quizRes.data?.data as any)
-          if (isReview) {
-            const resultRes = await testApi.results(Number(id))
-            setTestResult(resultRes.data?.data)
-          }
-        }
-      } catch (error: any) {
-        message.error(error.errorMessage || t.common_error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    init()
-  }, [id, isReview])
 
   const saveAnswer = async (qId: number, payload: any) => {
     setSaving(true)
@@ -170,6 +81,93 @@ export const TestPage = () => {
       setSubmitting(false)
     }
   }
+
+  const blocker = useBlocker(
+    ({ nextLocation }) =>
+      !isReview &&
+      quizInfo?.allow_resuming === false &&
+      !submitting &&
+      nextLocation.pathname !== location.pathname
+  );
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      if (window.confirm(t.test_leaveWarning)) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker, t.test_leaveWarning]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isReview && quizInfo?.allow_resuming === false && !submitting) {
+        e.preventDefault();
+        e.returnValue = t.test_leaveWarning;
+        return t.test_leaveWarning;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isReview, quizInfo, submitting, t.test_leaveWarning]);
+
+  // Set full-screen mode (hides sidebar) only when taking (not reviewing)
+  useEffect(() => {
+    setFullScreen(!isReview)
+    return () => setFullScreen(false)
+  }, [isReview, setFullScreen])
+
+  // Timer
+  useEffect(() => {
+    if (isReview || paused) return
+    const timer = setInterval(() => {
+      setElapsed(p => p + 1)
+      setRemaining(p => {
+        if (p === null) return null
+        // Trigger auto submit on exactly 0 via useEffect below
+        return p > 0 ? p - 1 : 0
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [isReview, paused])
+
+  // Auto-submit when remaining time hits 0
+  useEffect(() => {
+    if (remaining === 0 && !submitting && !isReview) {
+      handleSubmit()
+    }
+  }, [remaining, submitting, isReview])
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        setLoading(true)
+        if (!isReview) {
+          try { await testApi.start(Number(id)) } catch { /* already started */ }
+        }
+        const testRes = await testApi.retrieve(Number(id))
+        const tInfo = testRes.data?.data || null
+        setTestInfo(tInfo)
+        if (tInfo?.remaining_time !== undefined) {
+          setRemaining(tInfo.remaining_time)
+        }
+        if (tInfo) {
+          const quizRes = await quizApi.retrieve(tInfo.quiz)
+          setQuizInfo(quizRes.data?.data as any)
+          if (isReview) {
+            const resultRes = await testApi.results(Number(id))
+            setTestResult(resultRes.data?.data)
+          }
+        }
+      } catch (error: any) {
+        message.error(error.errorMessage || t.common_error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
+  }, [id, isReview])
 
   if (loading) {
     return (
@@ -223,7 +221,7 @@ export const TestPage = () => {
             </p>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 8 }}>
               <span className="result-score-circle">{score}</span>
-              <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--primary)', paddingBottom: 4 }}>%</span>
+              <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--primary)', paddingBottom: 4 }}>đ</span>
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>{performanceMsg}</p>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -285,7 +283,7 @@ export const TestPage = () => {
               <div className="progress-bar" style={{ flex: 1 }}>
                 <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color, width: 36, textAlign: 'right' }}>{pct}%</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color, width: 36, textAlign: 'right' }}>{pct}đ</span>
             </div>
           ))}
         </div>

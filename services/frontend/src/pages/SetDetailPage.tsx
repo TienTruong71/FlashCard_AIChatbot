@@ -6,16 +6,20 @@ import type { Set, Question, Quiz } from '../types'
 import { useLanguageStore } from '../store/languageStore'
 import { translations } from '../i18n'
 import { Share2, Plus, Trash2, ChevronRight, Eye, MinusCircle, Sparkles, BookOpen, Pencil } from 'lucide-react'
+import { useBreadcrumbStore } from '../store/breadcrumbStore'
+import { useAuthStore } from '../store/authStore'
 
 type QuestionType = 'single' | 'checkbox' | 'text'
 
 export const SetDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const { language } = useLanguageStore()
   const t = translations[language]
 
   const [setInfo, setSetInfo] = useState<Set | null>(null)
+  const { setTitle } = useBreadcrumbStore()
   const [questions, setQuestions] = useState<Question[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,6 +31,7 @@ export const SetDetailPage = () => {
   const [selectedTypes, setSelectedTypes] = useState<QuestionType[]>(['single', 'text'])
   const [questionCount, setQuestionCount] = useState(25)
   const [collaboratorInput, setCollaboratorInput] = useState('')
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
   const [quizMode, setQuizMode] = useState<'random' | 'manual'>('random')
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([])
@@ -43,8 +48,12 @@ export const SetDetailPage = () => {
         questionApi.list({ set: id }),
         setApi.listQuizzes(Number(id)),
       ])
-      setSetInfo(infoRes.data?.data || null)
-      setIsPublic(infoRes.data?.data?.is_public || false)
+      const setData = infoRes.data?.data
+      if (setData) {
+        setSetInfo(setData)
+        setIsPublic(setData.is_public || false)
+        setTitle(id, setData.title)
+      }
       setQuestions(qRes.data?.data || [])
       setQuizzes(quizRes.data?.data || [])
     } catch {
@@ -134,6 +143,25 @@ export const SetDetailPage = () => {
     }
   }
 
+  const handleDeleteSet = () => {
+    Modal.confirm({
+      title: 'Xóa bộ học phần?',
+      content: 'Bạn có chắc chắn muốn xóa bộ học phần này không? Hành động này không thể hoàn tác.',
+      okText: 'Xóa',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await setApi.destroy(Number(id))
+          message.success('Đã xóa bộ học phần')
+          navigate('/sets')
+        } catch {
+          message.error(t.common_error)
+        }
+      }
+    })
+  }
+
   const deleteQuestion = async (qId: number) => {
     try {
       await questionApi.destroy(qId)
@@ -167,17 +195,23 @@ export const SetDetailPage = () => {
 
   return (
     <div>
-      {/* Breadcrumb + Title */}
-      <div className="breadcrumb">
-        <Link to="/sets">{t.config_back}</Link>
-        <ChevronRight size={12} />
-        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{setInfo.title}</span>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-        <h1 className="page-title">{t.config_title}</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, marginTop: 8 }}>
+        <div>
+          <h1 className="page-title">{setInfo.title}</h1>
+          <p className="page-subtitle">{t.config_subtitle}</p>
+        </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-outline" onClick={() => message.info('Draft saved!')}>
+          <button className="btn btn-outline" style={{ gap: 8 }} onClick={() => setIsShareModalOpen(true)}>
+            <Share2 size={16} /> {t.ai_share}
+          </button>
+          
+          {setInfo.permission === 'edit' && (
+             <button className="btn btn-danger-ghost" style={{ gap: 8 }} onClick={handleDeleteSet}>
+              <Trash2 size={16} /> {t.common_delete}
+            </button>
+          )}
+
+          <button className="btn btn-primary" onClick={() => message.info('Draft saved!')}>
             {t.config_saveDraft}
           </button>
         </div>
@@ -521,6 +555,39 @@ export const SetDetailPage = () => {
             </button>
           </div>
         </Form>
+      </Modal>
+
+      {/* Share Set Modal Placeholder */}
+      <Modal
+        title={<span style={{ fontWeight: 700 }}>Chia sẻ bộ học phần: {setInfo.title}</span>}
+        open={isShareModalOpen}
+        onCancel={() => setIsShareModalOpen(false)}
+        footer={null}
+        width={480}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Email người nhận</label>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+            <Input placeholder="name@example.com" />
+            <button className="btn btn-primary" onClick={() => { message.success('Đã gửi lời mời!'); setIsShareModalOpen(false) }}>
+              Mời
+            </button>
+          </div>
+          
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Người có quyền truy cập</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div className="user-avatar" style={{ width: 32, height: 32 }}>ME</div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600 }}>Bạn (Chủ sở hữu)</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{user?.email || 'owner@example.com'}</p>
+                </div>
+              </div>
+              <span className="badge badge-primary">Edit</span>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   )

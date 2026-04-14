@@ -75,7 +75,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         )
         paginator = CustomPaginator()
         page = paginator.paginate_queryset(sets.qs, request)
-        serializer = SetSerializer(page, many=True)
+        serializer = SetSerializer(page, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
 
@@ -87,7 +87,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             return Response(
                 {
                     "status" : True,
-                    "data": SetSerializer(set).data,
+                    "data": SetSerializer(set, context={'request': request}).data,
                     "message":"Set created successfully!",
 
                 },
@@ -116,7 +116,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             return Response(
                 {
                     "status":True,
-                    "data":SetSerializer(set).data,
+                    "data":SetSerializer(set, context={'request': request}).data,
                     "message": "Set updated successfully!"
                 },
                 status=status.HTTP_200_OK,
@@ -134,7 +134,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         if error_response:
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = SetSerializer(set)
+        serializer = SetSerializer(set, context={'request': request})
         return Response(
             {
                 "status":True,
@@ -343,7 +343,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         return Response(
             {
                 "status": True,
-                "data": QuizSerializer(quiz).data,
+                "data": QuizSerializer(quiz, context={'request': request}).data,
                 "message": "Quiz created!"
             },
             status=status.HTTP_201_CREATED,

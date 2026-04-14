@@ -96,41 +96,51 @@ export const SetsPage = () => {
       </div>
 
       {/* Toolbar & Tabs */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-          <Segmented
-            options={[
-              { label: t.lib_mySets, value: 'sets' },
-              { label: t.lib_myQuizzes, value: 'quizzes' }
-            ]}
-            value={activeTab}
-            onChange={(val: any) => setActiveTab(val)}
-            style={{ padding: 4, borderRadius: 10 }}
-          />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
+        {/* Row 1: Tab Navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+          <button 
+            className={`tab-btn ${activeTab === 'sets' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('sets')}
+          >
+            {t.lib_mySets}
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'quizzes' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('quizzes')}
+          >
+            {t.lib_myQuizzes}
+          </button>
+        </div>
 
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div className="top-header-search" style={{ width: 240 }}>
-              <Search size={14} />
+        {/* Row 2: Search & Controls */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+            <div className="search-input-wrapper" style={{ width: '100%', maxWidth: 400 }}>
+              <Search size={16} color="var(--text-muted)" />
               <input
                 placeholder={`${t.common_search}...`}
                 value={searchText}
                 onChange={handleSearch}
               />
             </div>
-
+            
             <Select
               value={ordering}
               onChange={setOrdering}
               style={{ width: 140 }}
               placeholder={t.lib_sortBy}
-              className="custom-select"
+              className="custom-select-v2"
             >
               <Select.Option value="-created_at">{t.lib_newest}</Select.Option>
               <Select.Option value="created_at">{t.lib_oldest}</Select.Option>
             </Select>
+          </div>
+
+          <div style={{ marginLeft: 16 }}>
             {activeTab === 'sets' && (
-              <button className="btn btn-primary" onClick={() => setIsModalVisible(true)}>
-                <Plus size={14} /> {t.lib_createNew}
+              <button className="btn btn-primary" style={{ height: 40, borderRadius: 10, padding: '0 24px' }} onClick={() => setIsModalVisible(true)}>
+                <Plus size={16} /> {t.lib_createNew}
               </button>
             )}
           </div>

@@ -1,11 +1,13 @@
 from rest_framework import serializers
 from core.serializers.question_serializers import QuestionSerializer
-from core.models import Set
+from core.models import Set, SetShare
+from core.constant import PermissionEnum
 
 
 class SetSerializer(serializers.ModelSerializer):
 
     questions = QuestionSerializer(many=True, read_only=True)
+    permission = serializers.SerializerMethodField()
 
     class Meta:
         model = Set
@@ -14,9 +16,25 @@ class SetSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "is_public",
+            "user",
             "questions",
+            "permission",
             "created_at"
         ]
+
+    def get_permission(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        
+        if obj.user == request.user:
+            return "edit"
+        
+        share = SetShare.objects.filter(set=obj, user=request.user).first()
+        if share:
+            return share.permission
+        
+        return None
 
 
 class CreateSetSerializer(serializers.ModelSerializer):
