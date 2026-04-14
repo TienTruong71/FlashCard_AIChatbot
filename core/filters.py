@@ -66,7 +66,7 @@ class QuestionFilter(filters.FilterSet):
     )
     class Meta:
         model = Question
-        fields = ["type", "types"]
+        fields = ["type", "types", "set"]
 
     def filter_by_q(self, queryset, name, value):
         if not value:

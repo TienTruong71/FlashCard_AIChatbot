@@ -41,7 +41,7 @@ export const QuizDetailPage = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [shareUserId, setShareUserId] = useState<string>('')
+  const [shareEmail, setShareEmail] = useState<string>('')
   const [sharePermission, setSharePermission] = useState<'view' | 'edit'>('view')
   const [sharing, setSharing] = useState(false)
 
@@ -82,6 +82,10 @@ export const QuizDetailPage = () => {
 
   const handleStartTest = async () => {
     try {
+      if (inProgressTest) {
+        navigate(`/tests/${inProgressTest.id}`)
+        return
+      }
       const createRes = await testApi.create({ quiz: Number(id) })
       const testId = createRes.data?.data?.id
       if (testId) navigate(`/tests/${testId}`)
@@ -213,15 +217,15 @@ export const QuizDetailPage = () => {
   }
 
   const handleShareQuiz = async () => {
-    if (!quizInfo || !shareUserId) return
+    if (!quizInfo || !shareEmail) return
     setSharing(true)
     try {
       await quizApi.share(quizInfo.id, {
-        shares: [{ user_id: Number(shareUserId), permission: sharePermission }]
+        shares: [{ email: shareEmail, permission: sharePermission }]
       })
       message.success(t.ai_shareSuccess)
       setIsShareModalOpen(false)
-      setShareUserId('')
+      setShareEmail('')
     } catch (error: any) {
       message.error(error.errorMessage || t.common_error)
     } finally {
@@ -253,6 +257,8 @@ export const QuizDetailPage = () => {
   const avgScore = completedTests.length > 0
     ? Math.round(completedTests.reduce((a, b) => a + (b.score || 0), 0) / completedTests.length)
     : 0
+
+  const inProgressTest = tests.find(t => t.score === null || t.score === undefined)
 
   if (!quizInfo) return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>{loading ? t.common_loading : 'Quiz not found'}</div>
@@ -562,11 +568,19 @@ export const QuizDetailPage = () => {
 
             {quizInfo?.is_published && (
               <button
-                className="btn btn-success w-full"
+                className={`btn ${inProgressTest ? 'btn-primary' : 'btn-success'} w-full`}
                 style={{ justifyContent: 'center', marginTop: 4 }}
                 onClick={handleStartTest}
               >
-                <Play size={13} style={{ marginRight: 6 }} /> {t.config_startTest}
+                {inProgressTest ? (
+                  <>
+                    <Play size={13} style={{ marginRight: 6 }} /> {t.config_continueTest}
+                  </>
+                ) : (
+                  <>
+                    <Play size={13} style={{ marginRight: 6 }} /> {t.config_startTest}
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -639,9 +653,8 @@ export const QuizDetailPage = () => {
             <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t.ai_userId}</p>
             <Input
               placeholder={t.ai_userIdPlaceholder}
-              value={shareUserId}
-              onChange={e => setShareUserId(e.target.value)}
-              type="number"
+              value={shareEmail}
+              onChange={e => setShareEmail(e.target.value)}
             />
           </div>
           <div>

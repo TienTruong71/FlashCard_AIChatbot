@@ -185,9 +185,9 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
 
         shared_users = []
         for item in shares_data:
-            user_id = item["user_id"]
+            email = item["email"]
             permission = item["permission"]
-            user = User.objects.get(id=user_id)
+            user = User.objects.get(email=email)
             SetShare.objects.update_or_create(
                 set=set,
                 user=user,
@@ -195,7 +195,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
             )
             shared_users.append(
                 {
-                    "user_id" : user_id,
+                    "email" : email,
                     "permission": permission
                 }
             )
@@ -296,7 +296,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
                     {"status": False, "message": "question_count is required if question_ids is not provided!"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            questions = list(set_study.questions.all())
+            questions = list(set_study.questions.filter(is_deleted=False))
             if len(questions) < question_count:
                 return Response(
                     {

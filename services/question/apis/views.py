@@ -51,7 +51,7 @@ class QuestionViewSet(viewsets.ViewSet, _BaseQuestionViewSet):
     def list(self, request):
         filter_params = request.GET.dict()
 
-        queryset = Question.objects.all(). prefetch_related("answers").order_by("created_at")
+        queryset = Question.objects.filter(is_deleted=False).prefetch_related("answers").order_by("created_at")
 
         questions = QuestionFilter(filter_params, queryset=queryset)
 

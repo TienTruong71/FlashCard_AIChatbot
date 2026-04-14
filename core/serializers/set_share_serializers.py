@@ -2,7 +2,7 @@ from rest_framework import serializers
 from core.models import SetShare, User
 
 class ShareItemSerializer(serializers.Serializer):
-    user_id = serializers.IntegerField()
+    email = serializers.EmailField()
     permission  = serializers.ChoiceField(
             choices=SetShare.PERMISSION_CHOICES,
             required=True
@@ -17,19 +17,18 @@ class ShareSetSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("Share cannot be empty!")
 
-        user_ids = [item["user_id"] for item in value]
+        emails = [item["email"] for item in value]
 
-        if len(user_ids) != len(set(user_ids)):
-            raise serializers.ValidationError("Duplicate user ids detected!")
+        if len(emails) != len(set(emails)):
+            raise serializers.ValidationError("Duplicate emails detected!")
 
-        if any(uid <= 0 for uid in user_ids):
-            raise serializers.ValidationError("Invalid user id!")
-
-        existing_user_ids = User.objects.filter(id__in=user_ids).values_list('id', flat=True)
-        missing_ids = set(user_ids) - set(existing_user_ids)
+        missing_emails = []
+        for email in emails:
+            if not User.objects.filter(email=email).exists():
+                missing_emails.append(email)
         
-        if missing_ids:
-            raise serializers.ValidationError(f"User with ID(s) {list(missing_ids)} does not exist!")
+        if missing_emails:
+            raise serializers.ValidationError(f"User with Email(s) {missing_emails} does not exist!")
 
         return value
 

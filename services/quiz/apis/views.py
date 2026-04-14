@@ -229,9 +229,9 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
 
         shared_users = []
         for item in shares_data:
-            user_id = item["user_id"]
+            email = item["email"]
             permission = item["permission"]
-            user = User.objects.get(id=user_id)
+            user = User.objects.get(email=email)
             QuizShare.objects.update_or_create(
                 quiz=quiz,
                 user=user,
@@ -239,7 +239,7 @@ class QuizViewSet(viewsets.ViewSet, _BaseQuizViewSet):
             )
             shared_users.append(
                 {
-                    "user_id": user_id,
+                    "email": email,
                     "permission": permission,
                 }
             )

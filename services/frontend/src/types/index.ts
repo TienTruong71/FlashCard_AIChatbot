@@ -151,7 +151,11 @@ export interface CreateQuizQuestionPayload {
 }
 
 export interface ShareQuizPayload {
-  shares: { user_id: number; permission: string }[]
+  shares: { email: string; permission: string }[]
+}
+
+export interface ShareSetPayload {
+  shares: { email: string; permission: string }[]
 }
 
 

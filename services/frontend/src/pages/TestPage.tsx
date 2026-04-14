@@ -409,7 +409,7 @@ export const TestPage = () => {
               if (quizInfo?.allow_resuming === false) {
                 message.warning(t.test_resumeForbidden);
               } else {
-                navigate(`/sets/${quizInfo?.set}`);
+                navigate(`/quizzes/${quizInfo?.id}`);
               }
             }}
             disabled={quizInfo?.allow_resuming === false}

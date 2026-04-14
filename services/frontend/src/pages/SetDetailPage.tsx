@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Form, Input, Switch, message, Modal, Slider } from 'antd'
+import { Form, Input, Switch, message, Modal, Slider, Space, Select } from 'antd'
 import { setApi, questionApi } from '../api'
 import type { Set, Question, Quiz } from '../types'
 import { useLanguageStore } from '../store/languageStore'
@@ -32,6 +32,9 @@ export const SetDetailPage = () => {
   const [questionCount, setQuestionCount] = useState(25)
   const [collaboratorInput, setCollaboratorInput] = useState('')
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [shareEmail, setShareEmail] = useState('')
+  const [sharePermission, setSharePermission] = useState<'view' | 'edit'>('view')
+  const [sharing, setSharing] = useState(false)
 
   const [quizMode, setQuizMode] = useState<'random' | 'manual'>('random')
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([])
@@ -123,7 +126,7 @@ export const SetDetailPage = () => {
         title: values.title,
         is_published: values.is_published,
       }
-      
+
       if (quizMode === 'random') {
         payload.question_count = Math.min(Number(values.question_count), questions.length)
       } else {
@@ -140,6 +143,23 @@ export const SetDetailPage = () => {
       if (quizId) navigate(`/quizzes/${quizId}`)
     } catch (error: any) {
       message.error(error.errorMessage || t.common_error)
+    }
+  }
+
+  const handleShareSet = async () => {
+    if (!id || !shareEmail) return
+    setSharing(true)
+    try {
+      await setApi.share(Number(id), {
+        shares: [{ email: shareEmail, permission: sharePermission }]
+      })
+      message.success(t.ai_shareSuccess)
+      setIsShareModalOpen(false)
+      setShareEmail('')
+    } catch (error: any) {
+      message.error(error.errorMessage || t.common_error)
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -204,9 +224,9 @@ export const SetDetailPage = () => {
           <button className="btn btn-outline" style={{ gap: 8 }} onClick={() => setIsShareModalOpen(true)}>
             <Share2 size={16} /> {t.ai_share}
           </button>
-          
+
           {setInfo.permission === 'edit' && (
-             <button className="btn btn-danger-ghost" style={{ gap: 8 }} onClick={handleDeleteSet}>
+            <button className="btn btn-danger-ghost" style={{ gap: 8 }} onClick={handleDeleteSet}>
               <Trash2 size={16} /> {t.common_delete}
             </button>
           )}
@@ -507,7 +527,7 @@ export const SetDetailPage = () => {
           <Form.Item name="title" label={t.config_quizTitle} rules={[{ required: true }]}>
             <Input placeholder="e.g. Midterm Practice Quiz" />
           </Form.Item>
-          
+
           {quizMode === 'random' ? (
             <Form.Item name="question_count" label={t.config_questionCount} rules={[{ required: true }]}>
               <Input type="number" min={1} max={questions.length} />
@@ -520,8 +540,8 @@ export const SetDetailPage = () => {
               <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: 8 }}>
                 {questions.map(q => (
                   <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderBottom: '1px solid var(--border-light)' }}>
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={selectedQuestionIds.includes(q.id)}
                       onChange={(e) => {
                         if (e.target.checked) setSelectedQuestionIds(prev => [...prev, q.id])
@@ -557,37 +577,38 @@ export const SetDetailPage = () => {
         </Form>
       </Modal>
 
-      {/* Share Set Modal Placeholder */}
+      {/* Share Set Modal */}
       <Modal
-        title={<span style={{ fontWeight: 700 }}>Chia sẻ bộ học phần: {setInfo.title}</span>}
+        title={<span style={{ fontWeight: 700 }}>{t.ai_shareModalTitle || 'Chia sẻ bộ học phần'}</span>}
         open={isShareModalOpen}
         onCancel={() => setIsShareModalOpen(false)}
-        footer={null}
-        width={480}
+        onOk={handleShareSet}
+        confirmLoading={sharing}
+        okText={t.ai_share}
+        cancelText={t.ai_cancel}
       >
-        <div style={{ padding: '8px 0' }}>
-          <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Email người nhận</label>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-            <Input placeholder="name@example.com" />
-            <button className="btn btn-primary" onClick={() => { message.success('Đã gửi lời mời!'); setIsShareModalOpen(false) }}>
-              Mời
-            </button>
+        <Space direction="vertical" style={{ width: '100%', marginTop: 10 }} size="middle">
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t.ai_userId}</p>
+            <Input
+              placeholder={t.ai_userIdPlaceholder}
+              value={shareEmail}
+              onChange={e => setShareEmail(e.target.value)}
+            />
           </div>
-          
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Người có quyền truy cập</p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <div className="user-avatar" style={{ width: 32, height: 32 }}>ME</div>
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 600 }}>Bạn (Chủ sở hữu)</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{user?.email || 'owner@example.com'}</p>
-                </div>
-              </div>
-              <span className="badge badge-primary">Edit</span>
-            </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t.ai_permission}</p>
+            <Select
+              style={{ width: '100%' }}
+              value={sharePermission}
+              onChange={val => setSharePermission(val)}
+              options={[
+                { value: 'view', label: t.ai_viewPermission },
+                { value: 'edit', label: t.ai_editPermission },
+              ]}
+            />
           </div>
-        </div>
+        </Space>
       </Modal>
     </div>
   )

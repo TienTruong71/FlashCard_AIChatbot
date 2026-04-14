@@ -6,7 +6,7 @@ import type {
   CreateSetPayload,
   Quiz,
   Question,
-  ShareQuizPayload,
+  ShareSetPayload,
   PaginationParams,
 } from '../types'
 
@@ -46,7 +46,7 @@ export const setApi = {
     axiosInstance.delete<ApiResponse<void>>(`${SET_BASE}/${id}/`),
 
 
-  share: (id: number, payload: ShareQuizPayload) =>
+  share: (id: number, payload: ShareSetPayload) =>
     axiosInstance.post<ApiResponse<void>>(`${SET_BASE}/${id}/share/`, payload),
 
 

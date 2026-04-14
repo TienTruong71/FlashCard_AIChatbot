@@ -108,6 +108,7 @@ export const translations = {
     config_allowResuming: 'Allow Resuming',
     config_resumeDescription: 'If disabled, users cannot leave the test once started.',
     config_subtitle: 'Manage and update your study set questions',
+    config_continueTest: 'Continue test',
 
     // Question types
     qt_single: 'MULTIPLE CHOICE',
@@ -148,11 +149,11 @@ export const translations = {
     ai_share: 'Share',
     ai_confirmDelete: 'Are you sure you want to delete this quiz?',
     ai_shareModalTitle: 'Share Quiz',
-    ai_userId: 'User ID',
+    ai_userId: 'User Email',
     ai_permission: 'Permission',
     ai_viewPermission: 'View (Take test only)',
     ai_editPermission: 'Edit (Full access)',
-    ai_userIdPlaceholder: 'Enter User ID...',
+    ai_userIdPlaceholder: 'Enter user email...',
     ai_shareSuccess: 'Shared successfully!',
     ai_deleteSuccess: 'Quiz deleted successfully',
 
@@ -402,6 +403,7 @@ export const translations = {
     config_allowResuming: 'Cho phép quay lại làm tiếp',
     config_resumeDescription: 'Nếu tắt, người dùng không thể thoát bài thi khi đã bắt đầu.',
     config_subtitle: 'Quản lý và cập nhật các câu hỏi trong bộ học phần của bạn',
+    config_continueTest: 'Quay lại làm tiếp',
 
     // Question types
     qt_single: 'TRẮC NGHIỆM',
@@ -442,11 +444,11 @@ export const translations = {
     ai_share: 'Chia sẻ',
     ai_confirmDelete: 'Bạn có chắc chắn muốn xóa Quiz này không?',
     ai_shareModalTitle: 'Chia sẻ Quiz',
-    ai_userId: 'ID người dùng',
+    ai_userId: 'Email người dùng',
     ai_permission: 'Quyền truy cập',
     ai_viewPermission: 'Xem (Chỉ được thi)',
     ai_editPermission: 'Sửa (Toàn quyền)',
-    ai_userIdPlaceholder: 'Nhập ID người dùng...',
+    ai_userIdPlaceholder: 'Nhập email người dùng...',
     ai_shareSuccess: 'Đã chia sẻ thành công!',
     ai_deleteSuccess: 'Đã xóa Quiz thành công',
 
