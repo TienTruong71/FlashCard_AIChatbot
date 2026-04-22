@@ -160,12 +160,37 @@ export const SetDetailPage = () => {
         shares: [{ email: shareEmail, permission: sharePermission }]
       })
       message.success(t.ai_shareSuccess)
-      setIsShareModalOpen(false)
       setShareEmail('')
+      // Refresh to get the updated shares list
+      fetchData()
     } catch (error: any) {
       message.error(error.errorMessage || t.common_error)
     } finally {
       setSharing(false)
+    }
+  }
+
+  const handleUnshare = async (userId: number) => {
+    if (!id) return
+    try {
+      await setApi.unshare(Number(id), userId)
+      message.success('Đã gỡ quyền truy cập')
+      fetchData()
+    } catch (error: any) {
+      message.error(error.errorMessage || t.common_error)
+    }
+  }
+
+  const handleUpdatePermission = async (email: string, permission: 'view' | 'edit') => {
+    if (!id) return
+    try {
+      await setApi.share(Number(id), {
+        shares: [{ email, permission }]
+      })
+      message.success('Đã cập nhật quyền hạn')
+      fetchData()
+    } catch (error: any) {
+      message.error(error.errorMessage || t.common_error)
     }
   }
 
@@ -236,8 +261,22 @@ export const SetDetailPage = () => {
           <p className="page-subtitle">{t.config_subtitle}</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-outline" style={{ gap: 8 }} onClick={() => setIsShareModalOpen(true)}>
-            <Share2 size={16} /> {t.ai_share}
+          <button className="btn btn-outline" style={{ gap: 8, position: 'relative' }} onClick={() => setIsShareModalOpen(true)}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Share2 size={16} />
+              {(setInfo.share_count ?? 0) > 0 && (
+                <span style={{
+                  position: 'absolute', top: -8, right: -8,
+                  background: 'var(--primary)', color: 'white',
+                  fontSize: 9, fontWeight: 800, padding: '1px 5px',
+                  borderRadius: 10, border: '2px solid white',
+                  lineHeight: 1
+                }}>
+                  {setInfo.share_count}
+                </span>
+              )}
+            </div>
+            {t.ai_share}
           </button>
 
           {setInfo.permission === 'edit' && (
@@ -641,19 +680,54 @@ export const SetDetailPage = () => {
               onChange={e => setShareEmail(e.target.value)}
             />
           </div>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t.ai_permission}</p>
-            <Select
-              style={{ width: '100%' }}
-              value={sharePermission}
-              onChange={val => setSharePermission(val)}
-              options={[
-                { value: 'view', label: t.ai_viewPermission },
-                { value: 'edit', label: t.ai_editPermission },
-              ]}
-            />
-          </div>
         </Space>
+
+        {(setInfo.shares && setInfo.shares.length > 0) && (
+          <div style={{ marginTop: 24 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)' }}>
+              Người đã được chia sẻ ({setInfo.shares.length})
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {setInfo.shares.map((share) => (
+                <div key={share.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 12px', border: '1px solid var(--border-light)', borderRadius: 8,
+                  background: 'var(--bg-light)'
+                }}>
+                  <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {share.user_email}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Select
+                      size="small"
+                      value={share.permission}
+                      onChange={(val) => handleUpdatePermission(share.user_email, val)}
+                      style={{ width: 100 }}
+                      options={[
+                        { value: 'view', label: t.ai_viewPermission },
+                        { value: 'edit', label: t.ai_editPermission },
+                      ]}
+                    />
+                    <button
+                      onClick={() => handleUnshare(share.user)}
+                      style={{
+                        border: 'none', background: 'none', cursor: 'pointer',
+                        color: 'var(--danger)', padding: 4, display: 'flex', opacity: 0.7,
+                        transition: 'opacity 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                      onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

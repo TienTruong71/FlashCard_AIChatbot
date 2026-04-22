@@ -59,6 +59,14 @@ export interface RegisterPayload {
 // =====================
 // Set
 // =====================
+export interface ShareDetail {
+  id: number
+  user: number
+  user_email: string
+  permission: 'view' | 'edit'
+  created_at: string
+}
+
 export interface Set {
   id: number
   title: string
@@ -67,6 +75,8 @@ export interface Set {
   is_public: boolean
   permission?: 'view' | 'edit'
   question_count?: number
+  share_count?: number
+  shares?: ShareDetail[]
   created_at: string
   updated_at: string
 }
@@ -127,6 +137,8 @@ export interface Quiz {
   allow_resuming: boolean
   questions?: QuizQuestion[]
   permission?: 'view' | 'edit'
+  share_count?: number
+  shares?: ShareDetail[]
   set_title?: string
   created_at: string
   updated_at: string

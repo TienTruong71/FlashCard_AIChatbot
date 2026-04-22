@@ -16,6 +16,7 @@ import { SetDetailPage } from './pages/SetDetailPage'
 import { QuizDetailPage } from './pages/QuizDetailPage'
 import { TestPage } from './pages/TestPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { ChatbotPage } from './pages/ChatbotPage'
 
 import { useLayoutStore } from './store/layoutStore'
 import { useThemeStore } from './store/themeStore'
@@ -74,6 +75,10 @@ const router = createBrowserRouter([
           {
             path: '/analytics',
             element: <AnalyticsPage />,
+          },
+          {
+            path: '/chatbot',
+            element: <ChatbotPage />,
           },
           {
             path: '/tests/:id',

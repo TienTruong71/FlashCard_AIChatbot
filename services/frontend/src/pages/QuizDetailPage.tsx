@@ -147,11 +147,15 @@ export const QuizDetailPage = () => {
 
   const togglePublish = async () => {
     if (!quizInfo || !isOwner) return
+    if (quizInfo.is_published) {
+      message.warning('Quiz đã xuất bản không thể lùi về bản nháp')
+      return
+    }
     try {
-      const newStatus = !quizInfo.is_published
+      const newStatus = true
       await quizApi.update(quizInfo.id, { is_published: newStatus })
       setQuizInfo({ ...quizInfo, is_published: newStatus })
-      message.success(newStatus ? 'Đã chuyển sang Công khai' : 'Đã lùi về Bản nháp')
+      message.success('Đã chuyển sang Công khai')
     } catch {
       message.error(t.common_error)
     }
@@ -224,12 +228,37 @@ export const QuizDetailPage = () => {
         shares: [{ email: shareEmail, permission: sharePermission }]
       })
       message.success(t.ai_shareSuccess)
-      setIsShareModalOpen(false)
       setShareEmail('')
+      // Refresh to get the updated shares list
+      fetchData()
     } catch (error: any) {
       message.error(error.errorMessage || t.common_error)
     } finally {
       setSharing(false)
+    }
+  }
+
+  const handleUnshare = async (userId: number) => {
+    if (!quizInfo) return
+    try {
+      await quizApi.unshare(quizInfo.id, userId)
+      message.success('Đã gỡ quyền truy cập')
+      fetchData()
+    } catch (error: any) {
+      message.error(error.errorMessage || t.common_error)
+    }
+  }
+
+  const handleUpdatePermission = async (email: string, permission: 'view' | 'edit') => {
+    if (!quizInfo) return
+    try {
+      await quizApi.share(quizInfo.id, {
+        shares: [{ email, permission }]
+      })
+      message.success('Đã cập nhật quyền hạn')
+      fetchData()
+    } catch (error: any) {
+      message.error(error.errorMessage || t.common_error)
     }
   }
 
@@ -260,6 +289,14 @@ export const QuizDetailPage = () => {
 
   const inProgressTest = tests.find(t => t.status === 'pending' || t.status === 'in_progress')
 
+  const estimatedReadingTime = localQuestions.length > 0
+    ? (localQuestions.length * 0.2 + localQuestions.reduce((acc, q) => {
+      let words = q.title.trim().split(/\s+/).filter(w => w).length;
+      q.answers.forEach(a => { words += a.content.trim().split(/\s+/).filter(w => w).length });
+      return acc + words;
+    }, 0) / 200).toFixed(1)
+    : '0.0';
+
   if (!quizInfo) return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>{loading ? t.common_loading : 'Quiz not found'}</div>
   )
@@ -276,8 +313,22 @@ export const QuizDetailPage = () => {
         </div>
         <div style={{ display: 'flex', gap: 10, flexShrink: 0, alignItems: 'center' }}>
           {isOwner && (
-            <button className="btn btn-outline" onClick={() => setIsShareModalOpen(true)}>
-              <Share2 size={14} /> {t.ai_share}
+            <button className="btn btn-outline" style={{ gap: 8, position: 'relative' }} onClick={() => setIsShareModalOpen(true)}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Share2 size={14} />
+                {(quizInfo.share_count ?? 0) > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -8, right: -8,
+                    background: 'var(--primary)', color: 'white',
+                    fontSize: 9, fontWeight: 800, padding: '1px 5px',
+                    borderRadius: 10, border: '2px solid white',
+                    lineHeight: 1
+                  }}>
+                    {quizInfo.share_count}
+                  </span>
+                )}
+              </div>
+              {t.ai_share}
             </button>
           )}
           <button className="btn btn-ghost" onClick={handleDeleteQuiz} style={{ color: 'var(--danger)' }}>
@@ -482,9 +533,9 @@ export const QuizDetailPage = () => {
                   {quizInfo?.is_published ? 'Học sinh có thể thi' : 'Chưa công khai'}
                 </p>
               </div>
-              <div onClick={isOwner ? togglePublish : undefined} style={{ cursor: isOwner ? 'pointer' : 'not-allowed', display: 'flex' }}>
+              <div onClick={(isOwner && !quizInfo?.is_published) ? togglePublish : undefined} style={{ cursor: (isOwner && !quizInfo?.is_published) ? 'pointer' : 'not-allowed', display: 'flex' }}>
                 {quizInfo?.is_published
-                  ? <ToggleRight size={22} color="var(--success)" />
+                  ? <ToggleRight size={22} color="var(--success)" style={{ opacity: 0.6 }} />
                   : <ToggleLeft size={22} color="var(--text-muted)" />
                 }
               </div>
@@ -599,7 +650,7 @@ export const QuizDetailPage = () => {
               </div>
               <div>
                 <p style={{ fontSize: 28, fontWeight: 800, color: 'white', lineHeight: 1 }}>
-                  {(localQuestions.length * 2.1).toFixed(1)}m
+                  {estimatedReadingTime}m
                 </p>
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>{t.ai_avgReading}</p>
               </div>
@@ -607,10 +658,10 @@ export const QuizDetailPage = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{t.ai_knowledgeCoverage}</p>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>{Math.min(avgScore || 12, 100)}đ</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>{completedTests.length > 0 ? `${avgScore}%` : '0%'}</p>
               </div>
               <div style={{ height: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(avgScore || 12, 100)}%`, background: 'var(--success)', borderRadius: 10 }} />
+                <div style={{ height: '100%', width: `${completedTests.length > 0 ? avgScore : 0}%`, background: 'var(--success)', borderRadius: 10 }} />
               </div>
             </div>
           </div>
@@ -657,19 +708,55 @@ export const QuizDetailPage = () => {
               onChange={e => setShareEmail(e.target.value)}
             />
           </div>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t.ai_permission}</p>
-            <Select
-              style={{ width: '100%' }}
-              value={sharePermission}
-              onChange={val => setSharePermission(val)}
-              options={[
-                { value: 'view', label: t.ai_viewPermission },
-                { value: 'edit', label: t.ai_editPermission },
-              ]}
-            />
-          </div>
+            
         </Space>
+
+        {(quizInfo.shares && quizInfo.shares.length > 0) && (
+          <div style={{ marginTop: 24 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)' }}>
+              Người đã được chia sẻ ({quizInfo.shares.length})
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {quizInfo.shares.map((share) => (
+                <div key={share.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 12px', border: '1px solid var(--border-light)', borderRadius: 8,
+                  background: 'var(--bg-light)'
+                }}>
+                  <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {share.user_email}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Select
+                      size="small"
+                      value={share.permission}
+                      onChange={(val) => handleUpdatePermission(share.user_email, val)}
+                      style={{ width: 100 }}
+                      options={[
+                        { value: 'view', label: t.ai_viewPermission },
+                        { value: 'edit', label: t.ai_editPermission },
+                      ]}
+                    />
+                    <button
+                      onClick={() => handleUnshare(share.user)}
+                      style={{
+                        border: 'none', background: 'none', cursor: 'pointer',
+                        color: 'var(--danger)', padding: 4, display: 'flex', opacity: 0.7,
+                        transition: 'opacity 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                      onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

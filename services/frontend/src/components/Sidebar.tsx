@@ -10,6 +10,7 @@ import {
   Languages,
   Sun,
   Moon,
+  Bot,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useLanguageStore } from '../store/languageStore'
@@ -20,6 +21,7 @@ const navItems = [
   { key: '/dashboard', icon: LayoutDashboard, labelKey: 'nav_overview' as const },
   { key: '/sets', icon: BookOpen, labelKey: 'nav_library' as const },
   { key: '/analytics', icon: BarChart2, labelKey: 'nav_analytics' as const },
+  { key: '/chatbot', icon: Bot, labelKey: 'nav_chatbot' as const },
 ]
 
 export const Sidebar = () => {

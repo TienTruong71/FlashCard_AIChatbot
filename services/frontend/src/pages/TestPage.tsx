@@ -38,7 +38,7 @@ export const TestPage = () => {
   const [elapsed, setElapsed] = useState(0)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
-  const [pastAttempts, setPastAttempts] = useState<{id: number, score: number, submitted_at: string}[]>([])
+  const [pastAttempts, setPastAttempts] = useState<{ id: number, score: number, submitted_at: string }[]>([])
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60)
@@ -113,7 +113,6 @@ export const TestPage = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isReview, quizInfo, submitting, t.test_leaveWarning]);
 
-  // Set full-screen mode (hides sidebar) only when taking (not reviewing)
   useEffect(() => {
     setFullScreen(!isReview)
     return () => setFullScreen(false)
@@ -225,11 +224,19 @@ export const TestPage = () => {
     const incorrect = Math.max(0, total - correct)
     const timeSec = testResult.time_spent ?? elapsed
 
-    const performanceMsg = score >= 85
-      ? t.res_outstandingPerformance
-      : score >= 60
-        ? t.res_goodPerformance
-        : t.res_needsImprovement
+    const performanceMsg = score === 100
+      ? t.res_perfectScore
+      : score >= 90
+        ? t.res_almostPerfect
+        : score >= 80
+          ? t.res_outstandingPerformance
+          : score >= 65
+            ? t.res_goodPerformance
+            : score >= 50
+              ? t.res_averagePerformance
+              : score >= 30
+                ? t.res_needsImprovement
+                : t.res_poorPerformance
 
     const analyticsData = testResult.performance_by_type
       ? Object.entries(testResult.performance_by_type).map(([key, value]: [string, any]) => ({

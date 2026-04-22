@@ -28,7 +28,6 @@ services:
       - dbnetwork
       - nginx_network
 
-
   question-service:
     build:
       context: ./services/question
@@ -55,7 +54,6 @@ services:
       - redis_network
       - dbnetwork
       - nginx_network
-
 
   quiz-question-service:
     build:
@@ -84,7 +82,6 @@ services:
       - dbnetwork
       - nginx_network
 
-
   test-service:
     build:
       context: ./services/test
@@ -112,7 +109,6 @@ services:
       - dbnetwork
       - nginx_network
 
-
   set-service:
     build:
       context: ./services/set
@@ -130,6 +126,31 @@ services:
       - ./services/set/poetry.lock:/usr/src/service/poetry.lock
     ports:
       - 9002:8000
+    depends_on:
+      - redis
+      - db
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - redis_network
+      - dbnetwork
+      - nginx_network
+
+  ai-service:
+    build:
+      context: ./services/ai
+      dockerfile: Dockerfile
+    command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    env_file:
+      - .env
+    volumes:
+      - ./app:/usr/src/service/app
+      - ./core:/usr/src/service/core
+      - ./services/ai/apis:/usr/src/service/apis
+      - ./services/ai/pyproject.toml:/usr/src/service/pyproject.toml
+      - ./services/ai/poetry.lock:/usr/src/service/poetry.lock
+    ports:
+      - 9007:8000
     depends_on:
       - redis
       - db
@@ -300,6 +321,7 @@ volumes:
   static_volume:
   media_volume:
   node_modules_volume:
+
 
 networks:
   redis_network:

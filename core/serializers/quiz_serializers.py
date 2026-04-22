@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.db import transaction
 from core.models import Quiz, QuizQuestion, QuizQuestionAnswer, QuizShare
 from core.constant import QuestionTypeEnum, PermissionEnum
+from core.serializers.quiz_share_serializers import QuizShareSerializer
 
 
 class QuizQuestionAnswerSerializer(serializers.ModelSerializer):
@@ -49,6 +50,8 @@ class QuizDetailSerializer(serializers.ModelSerializer):
     questions = QuizQuestionSerializer(many=True, source="quiz_questions")
     permission = serializers.SerializerMethodField()
     set_title = serializers.ReadOnlyField(source='set.title')
+    share_count = serializers.SerializerMethodField()
+    shares = QuizShareSerializer(many=True, read_only=True)
 
     class Meta:
         model = Quiz
@@ -64,6 +67,8 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             "time_limit",
             "allow_resuming",
             "permission",
+            "share_count",
+            "shares",
             "created_at",
         ]
 
@@ -80,6 +85,9 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             return share.permission
         
         return None
+
+    def get_share_count(self, obj):
+        return QuizShare.objects.filter(quiz=obj).count()
 
 
 class CreateQuizSerializer(serializers.ModelSerializer):
