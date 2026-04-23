@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader2, MessageSquare, PlusCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Send, Loader2, MessageSquare, PlusCircle, Search } from 'lucide-react';
 import './ChatWidget.css';
 import { useLanguageStore } from '../store/languageStore';
 import { translations } from '../i18n';
@@ -24,7 +24,13 @@ export const ChatWidget: React.FC = () => {
   const [isFetchingSidebar, setIsFetchingSidebar] = useState(false);
   const [isFetchingMain, setIsFetchingMain] = useState(false);
 
+  const [quizSearch, setQuizSearch] = useState('');
+  const [quizPage, setQuizPage] = useState(1);
+  const [quizTotalPages, setQuizTotalPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,7 +49,6 @@ export const ChatWidget: React.FC = () => {
       setConversations(res.data);
       if (res.data.length === 0 && !currentConv) {
         handleNewChat();
-      } else if (!currentConv && view === 'empty') {
       }
     } catch (e) {
       console.error(e);
@@ -52,22 +57,61 @@ export const ChatWidget: React.FC = () => {
     }
   };
 
-  const loadQuizzes = async () => {
+  const loadQuizzes = useCallback(async (search = '', page = 1, append = false) => {
+    if (page === 1) setIsFetchingMain(true);
+    else setIsLoadingMore(true);
+
+    try {
+      const params: Record<string, string | number> = { page, page_size: 20 };
+      if (search.trim()) params.search = search.trim();
+
+      const res = await quizApi.list(params);
+      const data = res.data.data || [];
+      const pagination = res.data.pagination;
+
+      if (append) {
+        setQuizzes(prev => [...prev, ...data]);
+      } else {
+        setQuizzes(data);
+      }
+
+      setQuizTotalPages(pagination?.total_pages || 1);
+      setQuizPage(page);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsFetchingMain(false);
+      setIsLoadingMore(false);
+    }
+  }, []);
+
+  const handleQuizSearch = (value: string) => {
+    setQuizSearch(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      loadQuizzes(value, 1, false);
+    }, 400);
+  };
+
+  const handleLoadMore = () => {
+    if (quizPage < quizTotalPages && !isLoadingMore) {
+      loadQuizzes(quizSearch, quizPage + 1, true);
+    }
+  };
+
+  const handleNewChat = async () => {
     setIsFetchingMain(true);
     try {
-      const res = await quizApi.list({ page: 1, page_size: 10 });
-      setQuizzes(res.data.data || []);
+      const res = await aiApi.createConversation(undefined, "General Study Chat");
+      setCurrentConv(res.data);
+      setMessages([]);
+      setView('chat');
+      loadConversations();
     } catch (e) {
       console.error(e);
     } finally {
       setIsFetchingMain(false);
     }
-  };
-
-  const handleNewChat = () => {
-    setCurrentConv(null);
-    setView('quizzes');
-    loadQuizzes();
   };
 
   const handleSelectQuiz = async (quiz: Quiz) => {
@@ -177,20 +221,50 @@ export const ChatWidget: React.FC = () => {
           <div className="chat-message assistant">
             <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /></div>
             <div className="chat-bubble">
-              <p>{language === 'vi' ? 'Chào bạn! Bạn muốn thảo luận về Quiz nào hôm nay?' : 'Hi! Which quiz would you like to review today?'}</p>
+              <p>{language === 'vi' ? 'Chào bạn! Chọn Quiz bạn muốn ôn tập nhé.' : 'Hi! Pick a quiz you\'d like to review.'}</p>
             </div>
           </div>
+
+          {/* Search Bar */}
+          <div className="quiz-search-wrapper">
+            <Search size={16} className="quiz-search-icon" />
+            <input
+              type="text"
+              className="quiz-search-input"
+              placeholder={language === 'vi' ? 'Tìm kiếm quiz...' : 'Search quizzes...'}
+              value={quizSearch}
+              onChange={e => handleQuizSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Quiz List */}
           {isFetchingMain ? (
             <div style={{ textAlign: 'center', padding: '20px' }}><Loader2 className="spin" /></div>
           ) : (
-            <div className="quiz-grid">
-              {quizzes.length > 0 ? quizzes.map(quiz => (
-                <button key={quiz.id} className="quiz-card-btn" onClick={() => handleSelectQuiz(quiz)}>
-                  {quiz.title}
-                </button>
-              )) : (
-                <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'gray' }}>
-                  {language === 'vi' ? 'Bạn chưa có Quiz nào.' : 'You have no quizzes yet.'}
+            <div className="quiz-list">
+              {quizzes.length > 0 ? (
+                <>
+                  {quizzes.map(quiz => (
+                    <button key={quiz.id} className="quiz-list-item" onClick={() => handleSelectQuiz(quiz)}>
+                      <div className="quiz-list-item-title">{quiz.title}</div>
+                      <div className="quiz-list-item-meta">
+                        {quiz.question_count} {language === 'vi' ? 'câu hỏi' : 'questions'}
+                        {quiz.set_title && <span> · {quiz.set_title}</span>}
+                      </div>
+                    </button>
+                  ))}
+                  {quizPage < quizTotalPages && (
+                    <button className="quiz-load-more" onClick={handleLoadMore} disabled={isLoadingMore}>
+                      {isLoadingMore ? <Loader2 size={14} className="spin" /> : (language === 'vi' ? 'Tải thêm...' : 'Load more...')}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <p className="quiz-empty-text">
+                  {quizSearch
+                    ? (language === 'vi' ? `Không tìm thấy quiz "${quizSearch}".` : `No quizzes found for "${quizSearch}".`)
+                    : (language === 'vi' ? 'Bạn chưa có Quiz nào.' : 'You have no quizzes yet.')
+                  }
                 </p>
               )}
             </div>

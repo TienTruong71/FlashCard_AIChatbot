@@ -19,21 +19,27 @@ class ChatbotViewSet(viewsets.ViewSet):
             return Response({"message": "Quiz and user performance ingested successfully"}, status=status.HTTP_200_OK)
         return Response({"error": "Failed to ingest or quiz not found"}, status=status.HTTP_404_NOT_FOUND)
         
+
     @action(detail=False, methods=["get"])
     def conversations(self, request):
         qs = AIChatConversation.objects.filter(user=request.user)
         return Response(AIChatConversationSerializer(qs, many=True).data)
 
+
     @action(detail=False, methods=["post"])
     def create_conversation(self, request):
         quiz_id = request.data.get("quiz_id")
-        quiz_obj = get_object_or_404(Quiz, id=quiz_id, user=request.user)
-        title = request.data.get("title", f"Chat with {quiz_obj.title}")
+        quiz_obj = None
+        if quiz_id:
+            quiz_obj = get_object_or_404(Quiz, id=quiz_id, user=request.user)
+            
+        title = request.data.get("title")
+        if not title:
+            title = f"Chat with {quiz_obj.title}" if quiz_obj else "General Study Chat"
+            
         conv = AIChatConversation.objects.create(user=request.user, quiz=quiz_obj, title=title)
-        
-        ingest_quiz(quiz_id, user=request.user)
-        
         return Response(AIChatConversationSerializer(conv).data, status=status.HTTP_201_CREATED)
+
 
     @action(detail=False, methods=["get"], url_path="conversations/(?P<conv_id>[^/.]+)/messages")
     def messages(self, request, conv_id=None):
@@ -41,20 +47,21 @@ class ChatbotViewSet(viewsets.ViewSet):
         qs = AIChatMessage.objects.filter(conversation=conv).order_by("created")
         return Response(AIChatMessageSerializer(qs, many=True).data)
 
+
     @action(detail=False, methods=["post"])
     def chat(self, request):
         query = request.data.get("message")
         conv_id = request.data.get("conversation_id")
-        
+
         if not query or not conv_id:
             return Response({"error": "message and conversation_id are required"}, status=status.HTTP_400_BAD_REQUEST)
-            
+
         conv = get_object_or_404(AIChatConversation, id=conv_id, user=request.user)
-        
+
         AIChatMessage.objects.create(conversation=conv, role="user", content=query)
-        
+
         messages = AIChatMessage.objects.filter(conversation=conv).order_by("created")
-        
+
         chat_history = []
         user_msg = None
         for msg in messages:
@@ -63,9 +70,9 @@ class ChatbotViewSet(viewsets.ViewSet):
             elif msg.role == "assistant" and user_msg:
                 chat_history.append((user_msg, msg.content))
                 user_msg = None
-                
+
         try:
-            answer = get_answer(query, conv.quiz.id, chat_history=chat_history)
+            answer = get_answer(query, request.user, quiz=conv.quiz, chat_history=chat_history)
             AIChatMessage.objects.create(conversation=conv, role="assistant", content=answer)
             return Response({"answer": answer}, status=status.HTTP_200_OK)
         except Exception as e:

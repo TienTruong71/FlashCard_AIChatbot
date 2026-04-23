@@ -1,67 +1,82 @@
 import os
+import logging
 from django.conf import settings
 from core.models import Quiz, QuizQuestion, Test, TestAnswer
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain_chroma import Chroma
-from langchain.chains import ConversationalRetrievalChain
-from langchain.schema import Document
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.schema import SystemMessage, HumanMessage, AIMessage
 
-def get_embeddings():
-    return GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+logger = logging.getLogger(__name__)
+
+def get_api_key():
+    key = os.environ.get("GOOGLE_API_KEY")
+    if not key:
+        raise ValueError("GOOGLE_API_KEY environment variable is not set")
+    return key
 
 def get_llm():
-    return ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.7)
-
-def setup_vector_store(quiz_id):
-    persist_directory = os.path.join(settings.BASE_DIR, "chroma_db", f"quiz_{quiz_id}")
-    return Chroma(
-        persist_directory=persist_directory,
-        embedding_function=get_embeddings()
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.0-flash",
+        temperature=0.7,
+        google_api_key=get_api_key()
     )
 
-def ingest_quiz(quiz_id, user=None):
-    try:
-        quiz = Quiz.objects.get(id=quiz_id)
-        documents = []
+def get_user_context(user, query, specific_quiz=None):
+    context_parts = []
+    
+    if specific_quiz:
+        relevant_quizzes = [specific_quiz]
+    else:
+        quizzes = Quiz.objects.filter(user=user)
+        relevant_quizzes = []
+        for quiz in quizzes:
+            if quiz.title.lower() in query.lower():
+                relevant_quizzes.append(quiz)
+        if not relevant_quizzes:
+            relevant_quizzes = quizzes.order_by("-created")[:3]
         
-        quiz_questions = QuizQuestion.objects.filter(quiz=quiz).prefetch_related("answers")
-        for q in quiz_questions:
-            correct_answers = [a.content for a in q.answers.all() if a.is_correct]
-            content = f"Quiz Question: {q.title}\nCorrect Answer: {', '.join(correct_answers)}"
-            documents.append(Document(page_content=content, metadata={"type": "quiz_question", "id": q.id}))
-            
-        tests = Test.objects.filter(quiz=quiz)
-        if user:
-            tests = tests.filter(user=user)
-            
-        for test in tests:
-            test_content = f"User Performance - Score: {test.score}\nStatus: {test.status}\nSubmitted At: {test.submitted_at}"
-            documents.append(Document(page_content=test_content, metadata={"type": "test", "id": test.id}))
-            
-            answers = TestAnswer.objects.filter(test=test).select_related("quiz_question")
-            for ans in answers:
-                ans_status = "Correct" if ans.is_correct else "Incorrect"
-                ans_content = f"Performance Detail - Question: {ans.quiz_question.title}\nUser Answer Status: {ans_status}"
-                documents.append(Document(page_content=ans_content, metadata={"type": "performance_detail", "id": ans.id}))
+    for quiz in relevant_quizzes:
+        context_parts.append(f"--- QUIZ: {quiz.title} ---")
+        questions = QuizQuestion.objects.filter(quiz=quiz).prefetch_related("answers")
+        for q in questions:
+            correct = [a.content for a in q.answers.all() if a.is_correct]
+            context_parts.append(f"Question: {q.title} | Correct Answer: {', '.join(correct)}")
+        
+        latest_test = Test.objects.filter(user=user, quiz=quiz).order_by("-submitted_at").first()
+        if latest_test:
+            context_parts.append(f"User's Latest Result: Score {latest_test.score}, Status: {latest_test.status}")
 
-        if not documents:
-            return False
-            
-        vector_store = setup_vector_store(quiz_id)
-        vector_store.add_documents(documents)
-        return True
-    except Quiz.DoesNotExist:
-        return False
+    return "\n".join(context_parts)
 
-def get_answer(query, quiz_id, chat_history=None):
+def get_answer(query, user, quiz=None, chat_history=None):
     if chat_history is None:
         chat_history = []
-    vector_store = setup_vector_store(quiz_id)
+        
+    context = get_user_context(user, query, specific_quiz=quiz)
     llm = get_llm()
-    qa_chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=vector_store.as_retriever(search_kwargs={"k": 5}),
-        return_source_documents=False
-    )
-    response = qa_chain.invoke({"question": query, "chat_history": chat_history})
-    return response["answer"]
+    
+    messages = [
+        SystemMessage(content=(
+            "You are a helpful AI Study Assistant. "
+            "Below is the context about the user's quizzes and their performance. "
+            "Use this information to answer the user's question accurately. "
+            "If the user asks about a quiz not in the context, ask them to clarify which quiz they mean. "
+            "Always be encouraging and provide clear explanations.\n\n"
+            f"CONTEXT:\n{context}"
+        ))
+    ]
+    
+    for human, ai in chat_history:
+        messages.append(HumanMessage(content=human))
+        messages.append(AIMessage(content=ai))
+        
+    messages.append(HumanMessage(content=query))
+    
+    try:
+        response = llm.invoke(messages)
+        return response.content
+    except Exception as e:
+        logger.error(f"AI Error: {e}", exc_info=True)
+        return f"Sorry, I encountered an error: {str(e)}"
+
+def ingest_quiz(quiz_id, user=None):
+    return True

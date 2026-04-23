@@ -49,7 +49,9 @@ class PermissionEnum(Enum):
     VIEW = "view"
     EDIT = "edit"
 
-    
+class ChatRoleEnum(Enum):
+    USER = "user"
+    ADMIN = "admin"
 
 
 UI_PERMISSION_MAPPING = {}

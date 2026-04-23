@@ -19,7 +19,7 @@ def send_question_update_warning_task(self, question_id):
     try:
         logger.info(f"Processing question update warning for ID: {question_id}")
         question = Question.objects.get(id=question_id)
-        
+
         quiz_questions = QuizQuestion.objects.filter(question=question).select_related('quiz', 'quiz__user')
 
         affected_quizzes = {qq.quiz for qq in quiz_questions}

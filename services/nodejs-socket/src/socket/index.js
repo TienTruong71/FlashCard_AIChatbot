@@ -19,11 +19,11 @@ const __dirname = dirname(__filename);
 
 const PROTO_PATH = '../proto/notification.proto';
 const packageDefinition = protoLoader.loadSync(path.join(__dirname, PROTO_PATH), {
-  keepCase: true,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true
 });
 const notificationProto = grpc.loadPackageDefinition(packageDefinition).NotificationService;
 
@@ -42,11 +42,9 @@ if (process.env.NODE_ENV !== 'development') {
     app.use(morgan.dev);
 }
 io.use(verifyTokenSocket)
-io.on('connection', (socket)=>{
+io.on('connection', (socket) => {
     socket.join(`user:${socket.user.user_id}`);
     console.log(`user with id ${socket.user.user_id} connected`);
-
-    // ==================================global =================================
 
     socket.on('globalNotify', async (res) => {
         try {
@@ -85,7 +83,6 @@ const emitNotification = (call, callback) => {
     );
     Promise.all(notificationPromises);
 
-    // Respond to gRPC client (Django)
     callback(null, { status: true, message: 'Notification grpc sent successfully' });
 };
 
@@ -94,3 +91,4 @@ const grpcServer = new grpc.Server();
 grpcServer.addService(notificationProto.service, { emitNotification: emitNotification });
 
 export { app, io, server, grpcServer };
+

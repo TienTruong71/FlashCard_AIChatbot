@@ -6,7 +6,7 @@ from django_extensions.db.models import TimeStampedModel
 from django_softdelete.models import SoftDeleteModel
 from .managers import DeletedUserManager, GlobalUserManager, SoftDeleteUserManager
 
-from core.constant import USER_DEFAULT_SYSTEM, NotificationTypeEnum, QuestionTypeEnum, TestStatusEnum, PermissionEnum
+from core.constant import USER_DEFAULT_SYSTEM, NotificationTypeEnum, QuestionTypeEnum, TestStatusEnum, PermissionEnum, ChatRoleEnum
 
 class User(AbstractBaseUser, TimeStampedModel, SoftDeleteModel):
     email = models.EmailField(unique=True, null=True, max_length=255)
@@ -127,6 +127,7 @@ class Question(models.Model):
 
     def __str__ (self):
         return f"{self.set} {self.title} {self.type}"
+
 
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="answers")
@@ -268,7 +269,7 @@ class TestAnswer(models.Model):
 
 class AIChatConversation(TimeStampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ai_conversations")
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="ai_conversations")
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="ai_conversations", null=True, blank=True)
     title = models.CharField(max_length=255, default="New Conversation")
 
     class Meta:
@@ -280,10 +281,7 @@ class AIChatConversation(TimeStampedModel):
 
 
 class AIChatMessage(TimeStampedModel):
-    ROLE_CHOICES = (
-        ("user", "User"),
-        ("assistant", "Assistant"),
-    )
+    ROLE_CHOICES = tuple((e.value, e.name.replace("_", " ").title()) for e in ChatRoleEnum)
     conversation = models.ForeignKey(AIChatConversation, on_delete=models.CASCADE, related_name="messages")
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     content = models.TextField()

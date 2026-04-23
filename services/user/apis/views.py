@@ -65,6 +65,7 @@ class AuthenViewSet(viewsets.ViewSet):
 
         return global_response_errors(serializer.errors)
 
+
     @action(detail=False, methods=["post"], url_path="verify-otp", permission_classes=[AllowAny], authentication_classes=[])
     def verify_otp(self, request):
         email = request.data.get("email")
@@ -205,7 +206,6 @@ class AuthenViewSet(viewsets.ViewSet):
             raise AuthenticationFailed(f"{str(e)}!")
         except InvalidToken as e:
             raise AuthenticationFailed(f"{str(e)}!")
-
 
 
 class CustomTokenRefreshView(TokenRefreshView):
