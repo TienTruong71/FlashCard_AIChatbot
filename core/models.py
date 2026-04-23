@@ -264,3 +264,33 @@ class TestAnswer(models.Model):
 
     class Meta:
         db_table = "tests_answer"
+
+
+class AIChatConversation(TimeStampedModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ai_conversations")
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="ai_conversations")
+    title = models.CharField(max_length=255, default="New Conversation")
+
+    class Meta:
+        db_table = "ai_chat_conversations"
+        ordering = ["-created"]
+
+    def __str__(self):
+        return f"{self.title} - {self.user.email}"
+
+
+class AIChatMessage(TimeStampedModel):
+    ROLE_CHOICES = (
+        ("user", "User"),
+        ("assistant", "Assistant"),
+    )
+    conversation = models.ForeignKey(AIChatConversation, on_delete=models.CASCADE, related_name="messages")
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    content = models.TextField()
+
+    class Meta:
+        db_table = "ai_chat_messages"
+        ordering = ["created"]
+
+    def __str__(self):
+        return f"{self.role} - {self.conversation.id}"

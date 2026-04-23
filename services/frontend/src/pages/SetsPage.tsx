@@ -227,9 +227,9 @@ export const SetsPage = () => {
                   <div className="set-card-icon" style={{ background: `${iconColor}15` }}>
                     <Icon size={18} color={iconColor} />
                   </div>
-                  <span className={`badge ${item.is_public || (item as Quiz).is_published ? 'badge-public' : 'badge-private'}`}>
+                  <span className={`badge ${isSet ? ((item as Set).is_public ? 'badge-public' : 'badge-private') : ((item as Quiz).is_published ? 'badge-public' : 'badge-private')}`}>
                     {isSet ? (
-                      item.is_public ? t.lib_public : <><Lock size={9} style={{ marginRight: 3 }} />{t.lib_private}</>
+                      (item as Set).is_public ? t.lib_public : <><Lock size={9} style={{ marginRight: 3 }} />{t.lib_private}</>
                     ) : (
                       (item as Quiz).is_published ? 'Published' : 'Draft'
                     )}

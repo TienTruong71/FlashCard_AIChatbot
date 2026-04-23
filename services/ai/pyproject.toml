@@ -45,6 +45,8 @@ mssql-django = "^1.5"
 langchain = "^0.3.7"
 langchain-google-genai = "^2.0.4"
 chromadb = "^0.5.15"
+langchain-community = "^0.3.7"
+langchain-chroma = "^0.1.0"
 
 
 [build-system]

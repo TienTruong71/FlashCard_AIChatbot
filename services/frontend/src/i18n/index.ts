@@ -112,9 +112,9 @@ export const translations = {
     config_continueTest: 'Continue test',
 
     // Question types
-    qt_single: 'MULTIPLE CHOICE',
-    qt_checkbox: 'MULTI SELECT',
-    qt_text: 'TEXT FILL',
+    qt_single: 'Single Choice',
+    qt_checkbox: 'Checkboxes',
+    qt_text: 'Text Fill',
     qt_trueFalse: 'TRUE / FALSE',
     qt_timeLimit: 'Time Limit',
     qt_unlimited: 'Unlimited',

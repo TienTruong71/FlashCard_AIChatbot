@@ -16,8 +16,7 @@ import { SetDetailPage } from './pages/SetDetailPage'
 import { QuizDetailPage } from './pages/QuizDetailPage'
 import { TestPage } from './pages/TestPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
-import { ChatbotPage } from './pages/ChatbotPage'
-
+import { ChatWidget } from './components/ChatWidget'
 import { useLayoutStore } from './store/layoutStore'
 import { useThemeStore } from './store/themeStore'
 
@@ -32,6 +31,7 @@ const MainLayout = () => {
         <main className="page-content">
           <Outlet />
         </main>
+        <ChatWidget />
       </div>
     </div>
   )
@@ -75,10 +75,6 @@ const router = createBrowserRouter([
           {
             path: '/analytics',
             element: <AnalyticsPage />,
-          },
-          {
-            path: '/chatbot',
-            element: <ChatbotPage />,
           },
           {
             path: '/tests/:id',
