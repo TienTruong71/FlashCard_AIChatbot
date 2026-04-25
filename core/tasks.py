@@ -12,7 +12,6 @@ def send_share_notification_task(self, recipient_email, recipient_name, item_tit
     except Exception as e:
         logger.error(f"Failed to send share notification: {e}")
 
-
 @celery_client.task(name="send_question_update_warning_task", bind=True, max_retries=3)
 def send_question_update_warning_task(self, question_id):
     from core.models import Question, QuizQuestion, QuizShare
@@ -49,16 +48,35 @@ def send_question_update_warning_task(self, question_id):
 
 @celery_client.task(name="summarize_conversation_title_task", bind=True, max_retries=2)
 def summarize_conversation_title_task(self, conversation_id, first_message):
+    import os
+    import requests
     from core.models import AIChatConversation
-    from services.ai.apis.rag import generate_title
     
     try:
         conv = AIChatConversation.objects.get(id=conversation_id)
         if conv.title == "General Study Chat" or conv.title.startswith("Chat with"):
-            new_title = generate_title(first_message)
-            if new_title:
-                conv.title = new_title
-                conv.save()
-                logger.info(f"Updated conversation {conversation_id} title to: {new_title}")
+            key = os.environ.get("GOOGLE_API_KEY")
+            if not key:
+                logger.error("GOOGLE_API_KEY not set in Celery worker")
+                return
+
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={key}"
+            prompt = f"Based on this first message from a user, generate a very short conversation title (2-4 words) in the same language as the message. Reply ONLY with the title. Message: {first_message}"
+
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}]
+            }
+
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                new_title = data['candidates'][0]['content']['parts'][0]['text'].strip().strip('"')
+                if new_title:
+                    conv.title = new_title
+                    conv.save()
+                    logger.info(f"Updated conversation {conversation_id} title to: {new_title}")
+            else:
+                logger.error(f"Gemini API error: {response.status_code} - {response.text}")
+
     except Exception as e:
         logger.error(f"Failed to summarize conversation title: {e}")

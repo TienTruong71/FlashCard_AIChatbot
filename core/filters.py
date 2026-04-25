@@ -116,14 +116,12 @@ class QuizFilter(filters.FilterSet):
         fields=(
             ("id", "id"),
             ("title", "title"),
-            ("description", "description"),
             ("created_at", "created_at"),
             ("updated_at", "updated_at"),
         ),
         field_labels={
             "id": "ID",
             "title": "Title",
-            "description": "Description",
             "created_at": "Created Time",
             "updated_at": "Updated Time",
         }
@@ -135,7 +133,7 @@ class QuizFilter(filters.FilterSet):
 
     def filter_by_q(self, queryset, name, value):
         if value:
-            return queryset.filter(Q(title__icontains=value) | Q(description__icontains=value)).distinct()
+            return queryset.filter(Q(title__icontains=value)).distinct()
         return queryset
 
 
@@ -166,7 +164,7 @@ class TestFilter(filters.FilterSet):
 
     def filter_by_q(self, queryset, name, value):
         if value:
-            return queryset.filter(Q(user__icontains=value)| Q(score__icontains=value) | Q(status__icontains=value)).distinct()
+            return queryset.filter(Q(user__email__icontains=value) | Q(status__icontains=value)).distinct()
         return queryset
 
 
@@ -199,5 +197,5 @@ class UserFilter(filters.FilterSet):
 
     def filter_by_q(self, queryset, name, value):
         if value:
-            return queryset.filter(Q(email__icontains=value)| Q(role__icontains=value) | Q(first_name__icontains=value) | Q(last_name__icontains=value) ).distinct()
+            return queryset.filter(Q(email__icontains=value) | Q(first_name__icontains=value) | Q(last_name__icontains=value) ).distinct()
         return queryset

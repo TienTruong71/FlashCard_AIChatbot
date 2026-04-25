@@ -191,7 +191,7 @@ export const ChatWidget: React.FC = () => {
       };
       setMessages(prev => [...prev, aiMsg]);
       if (messages.length === 0) {
-        loadConversations();
+        setTimeout(() => loadConversations(), 2000);
       }
     } catch (e) {
       console.error(e);
