@@ -135,7 +135,7 @@ class UpdateQuizSerializer(serializers.ModelSerializer):
             "max_length": "Title cannot exceed 255 characters!",
         },
     )
-    
+
     is_published = serializers.BooleanField(required=False)
     time_limit = serializers.IntegerField(required=False, allow_null=True)
     allow_resuming = serializers.BooleanField(required=False)
@@ -194,6 +194,7 @@ class QuizQuestionValidationMixin:
                     raise serializers.ValidationError("Text question must have exactly 1 correct answer!")
 
         return data
+
 
 class CreateQuizQuestionSerializer(QuizQuestionValidationMixin,serializers.ModelSerializer):
     answers = QuizQuestionAnswerSerializer(many=True)

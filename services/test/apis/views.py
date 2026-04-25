@@ -473,7 +473,7 @@ class TestViewSet(viewsets.ViewSet, _BaseSetViewSet):
                     {"status": False, "message": "Only answer_ids should be provided for checkbox!"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
+    
             answers = QuizQuestionAnswer.objects.filter(
                 id__in=answer_ids,
                 quiz_question=question

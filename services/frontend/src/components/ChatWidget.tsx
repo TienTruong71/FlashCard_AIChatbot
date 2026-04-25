@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Send, Loader2, MessageSquare, PlusCircle, Search } from 'lucide-react';
+import { X, Send, Loader2, MessageSquare, PlusCircle, Search, Trash2 } from 'lucide-react';
 import './ChatWidget.css';
 import { useLanguageStore } from '../store/languageStore';
 import { translations } from '../i18n';
@@ -143,6 +143,30 @@ export const ChatWidget: React.FC = () => {
     }
   };
 
+  const handleDeleteConversation = async () => {
+    if (!currentConv) return;
+    await handleDeleteConversationById(currentConv.id);
+  };
+
+  const handleDeleteConversationById = async (id: number) => {
+    if (!window.confirm(language === 'vi' ? 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này?' : 'Are you sure you want to delete this conversation?')) return;
+
+    setIsFetchingMain(true);
+    try {
+      await aiApi.deleteConversation(id);
+      if (currentConv?.id === id) {
+        setCurrentConv(null);
+        setMessages([]);
+        setView('empty');
+      }
+      loadConversations();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsFetchingMain(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || !currentConv || isLoading) return;
 
@@ -166,8 +190,18 @@ export const ChatWidget: React.FC = () => {
         created: new Date().toISOString()
       };
       setMessages(prev => [...prev, aiMsg]);
+      if (messages.length === 0) {
+        loadConversations();
+      }
     } catch (e) {
       console.error(e);
+      const errorMsg: AIChatMessage = {
+        id: Date.now() + 2,
+        role: 'assistant',
+        content: language === 'vi' ? 'Xin lỗi, đã có lỗi xảy ra khi kết nối với AI. Vui lòng thử lại sau.' : 'Sorry, an error occurred while connecting to the AI. Please try again later.',
+        created: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
@@ -183,16 +217,27 @@ export const ChatWidget: React.FC = () => {
           <div style={{ textAlign: 'center', padding: '20px' }}><Loader2 className="spin" size={18} /></div>
         ) : (
           conversations.map(c => (
-            <button
-              key={c.id}
-              className={`chat-sidebar-item ${currentConv?.id === c.id ? 'active' : ''}`}
-              onClick={() => handleSelectConversation(c)}
-            >
-              <MessageSquare size={16} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {c.title}
-              </span>
-            </button>
+            <div key={c.id} className={`chat-sidebar-item-container ${currentConv?.id === c.id ? 'active' : ''}`}>
+              <button
+                className="chat-sidebar-item"
+                onClick={() => handleSelectConversation(c)}
+              >
+                <MessageSquare size={16} />
+                <span className="chat-sidebar-item-title">
+                  {c.title}
+                </span>
+              </button>
+              <button
+                className="chat-sidebar-delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteConversationById(c.id);
+                }}
+                title={language === 'vi' ? 'Xóa' : 'Delete'}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           ))
         )}
       </div>
@@ -209,7 +254,7 @@ export const ChatWidget: React.FC = () => {
     if (view === 'empty') {
       return (
         <div className="chat-empty-state">
-          <img src="/chatbot-icon.png" alt="AI" style={{ width: 52, height: 52, opacity: 0.5, marginBottom: 16 }} />
+          <img src="/chatbot-icon.png" alt="AI" style={{ width: 80, height: 80, marginBottom: 16, borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }} />
           <p>{language === 'vi' ? 'Chọn một cuộc trò chuyện từ danh sách hoặc tạo mới.' : 'Select a conversation from the sidebar or start a new one.'}</p>
         </div>
       );
@@ -290,7 +335,7 @@ export const ChatWidget: React.FC = () => {
                 <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /></div>
               )}
               <div className="chat-bubble">
-                <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</p>
+                <p style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{msg.content}</p>
               </div>
             </div>
           ))}
@@ -333,9 +378,16 @@ export const ChatWidget: React.FC = () => {
                 <img src="/chatbot-icon.png" alt="AI" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
                 {currentConv ? currentConv.title : (language === 'vi' ? 'AI Trợ lý' : 'AI Assistant')}
               </h3>
-              <button className="chat-widget-close" onClick={() => setIsOpen(false)}>
-                <X size={20} />
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {currentConv && (
+                  <button className="chat-widget-close" onClick={handleDeleteConversation} title="Delete Conversation">
+                    <Trash2 size={20} />
+                  </button>
+                )}
+                <button className="chat-widget-close" onClick={() => setIsOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             {renderMainContent()}
           </div>

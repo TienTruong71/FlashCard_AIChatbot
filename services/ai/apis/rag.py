@@ -15,31 +15,27 @@ def get_api_key():
 
 def get_llm():
     return ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-3-flash-preview",
         temperature=0.7,
         google_api_key=get_api_key()
     )
 
 def get_user_context(user, query, specific_quiz=None):
     context_parts = []
-    
+
     if specific_quiz:
         relevant_quizzes = [specific_quiz]
     else:
-        quizzes = Quiz.objects.filter(user=user)
-        relevant_quizzes = []
-        for quiz in quizzes:
-            if quiz.title.lower() in query.lower():
-                relevant_quizzes.append(quiz)
+        relevant_quizzes = Quiz.objects.filter(user=user, title__icontains=query)[:3]
         if not relevant_quizzes:
-            relevant_quizzes = quizzes.order_by("-created")[:3]
-        
+            relevant_quizzes = Quiz.objects.filter(user=user).order_by("-created_at")[:2]
+
     for quiz in relevant_quizzes:
         context_parts.append(f"--- QUIZ: {quiz.title} ---")
-        questions = QuizQuestion.objects.filter(quiz=quiz).prefetch_related("answers")
+        questions = QuizQuestion.objects.filter(quiz=quiz).prefetch_related("answers")[:10]
         for q in questions:
             correct = [a.content for a in q.answers.all() if a.is_correct]
-            context_parts.append(f"Question: {q.title} | Correct Answer: {', '.join(correct)}")
+            context_parts.append(f"Q: {q.title} | A: {', '.join(correct)}")
         
         latest_test = Test.objects.filter(user=user, quiz=quiz).order_by("-submitted_at").first()
         if latest_test:
@@ -57,10 +53,12 @@ def get_answer(query, user, quiz=None, chat_history=None):
     messages = [
         SystemMessage(content=(
             "You are a helpful AI Study Assistant. "
-            "Below is the context about the user's quizzes and their performance. "
-            "Use this information to answer the user's question accurately. "
-            "If the user asks about a quiz not in the context, ask them to clarify which quiz they mean. "
-            "Always be encouraging and provide clear explanations.\n\n"
+            "STRICT RULES:\n"
+            "1. NO MARKDOWN BOLDING. Never use double asterisks (**). Use plain text or capitalize if needed for emphasis.\n"
+            "2. BE EXTREMELY CONCISE. Keep answers very short (1-3 sentences) unless the user asks for a deep dive.\n"
+            "3. NO ASTERISK LISTS. Use numbers (1., 2.) or dashes (-) for lists instead of asterisks (*).\n"
+            "4. SELECTIVE CONTEXT: Only discuss specific quiz results or performance metrics if the user specifically asks about them (e.g., 'how did I do?', 'scores?'). Otherwise, be a general assistant.\n"
+            "5. NO YAPPING. Do not give long introductions or conclusions.\n\n"
             f"CONTEXT:\n{context}"
         ))
     ]
@@ -70,7 +68,7 @@ def get_answer(query, user, quiz=None, chat_history=None):
         messages.append(AIMessage(content=ai))
         
     messages.append(HumanMessage(content=query))
-    
+
     try:
         response = llm.invoke(messages)
         return response.content
@@ -80,3 +78,12 @@ def get_answer(query, user, quiz=None, chat_history=None):
 
 def ingest_quiz(quiz_id, user=None):
     return True
+
+def generate_title(message):
+    llm = get_llm()
+    prompt = f"Based on this first message from a user, generate a very short conversation title (2-4 words) in the same language as the message. Reply ONLY with the title.\n\nMessage: {message}"
+    try:
+        response = llm.invoke([HumanMessage(content=prompt)])
+        return response.content.strip().strip('"')
+    except:
+        return "New Conversation"

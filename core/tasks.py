@@ -46,3 +46,19 @@ def send_question_update_warning_task(self, question_id):
         logger.error(f"Question with ID {question_id} does not exist.")
     except Exception as e:
         logger.error(f"Failed to process question update warning: {e}")
+
+@celery_client.task(name="summarize_conversation_title_task", bind=True, max_retries=2)
+def summarize_conversation_title_task(self, conversation_id, first_message):
+    from core.models import AIChatConversation
+    from services.ai.apis.rag import generate_title
+    
+    try:
+        conv = AIChatConversation.objects.get(id=conversation_id)
+        if conv.title == "General Study Chat" or conv.title.startswith("Chat with"):
+            new_title = generate_title(first_message)
+            if new_title:
+                conv.title = new_title
+                conv.save()
+                logger.info(f"Updated conversation {conversation_id} title to: {new_title}")
+    except Exception as e:
+        logger.error(f"Failed to summarize conversation title: {e}")

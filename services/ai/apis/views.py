@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from core.models import AIChatConversation, AIChatMessage, Quiz
 from core.serializers.ai_serializers import AIChatConversationSerializer, AIChatMessageSerializer
 from .rag import ingest_quiz, get_answer
+from core.tasks import summarize_conversation_title_task
 
 class ChatbotViewSet(viewsets.ViewSet):
     
@@ -48,6 +49,13 @@ class ChatbotViewSet(viewsets.ViewSet):
         return Response(AIChatMessageSerializer(qs, many=True).data)
 
 
+    @action(detail=False, methods=["delete"], url_path="conversations/(?P<conv_id>[^/.]+)")
+    def delete_conversation(self, request, conv_id=None):
+        conv = get_object_or_404(AIChatConversation, id=conv_id, user=request.user)
+        conv.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
     @action(detail=False, methods=["post"])
     def chat(self, request):
         query = request.data.get("message")
@@ -61,6 +69,9 @@ class ChatbotViewSet(viewsets.ViewSet):
         AIChatMessage.objects.create(conversation=conv, role="user", content=query)
 
         messages = AIChatMessage.objects.filter(conversation=conv).order_by("created")
+        
+        if messages.count() <= 1 and (conv.title == "General Study Chat" or conv.title.startswith("Chat with")):
+            summarize_conversation_title_task.delay(conv.id, query)
 
         chat_history = []
         user_msg = None

@@ -33,5 +33,8 @@ export const aiApi = {
   chat: (conversationId: number, message: string) => {
     return axiosInstance.post(`http://localhost:9007/api/v1/chatbot/chat/`, { conversation_id: conversationId, message });
   },
+  deleteConversation: (conversationId: number) => {
+    return axiosInstance.delete(`http://localhost:9007/api/v1/chatbot/conversations/${conversationId}/`);
+  },
 };
 
