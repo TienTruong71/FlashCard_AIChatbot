@@ -37,7 +37,7 @@ class ChatbotViewSet(viewsets.ViewSet):
         title = request.data.get("title")
         if not title:
             title = f"Chat with {quiz_obj.title}" if quiz_obj else "General Study Chat"
-            
+
         conv = AIChatConversation.objects.create(user=request.user, quiz=quiz_obj, title=title)
         return Response(AIChatConversationSerializer(conv).data, status=status.HTTP_201_CREATED)
 

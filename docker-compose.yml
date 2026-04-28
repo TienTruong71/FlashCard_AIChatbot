@@ -6,6 +6,7 @@ services:
       context: ./services/user
       dockerfile: Dockerfile
     command: uvicorn app.asgi:application --host 0.0.0.0 --port 8000 --reload --log-level info
+    restart: always
     env_file:
       - .env
     volumes:
@@ -236,6 +237,7 @@ services:
 
   redis:
     image: "redis:latest"
+    restart: always
     ports:
       - 6379:6379
     networks:
@@ -291,6 +293,7 @@ services:
 
   nginx:
     build: ./nginx
+    restart: always
     volumes:
       - static_volume:/home/app/web/static
       - media_volume:/home/app/web/media
@@ -304,6 +307,7 @@ services:
 
   db:
     image: postgres:16
+    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     ports:

@@ -18,8 +18,11 @@ from core.serializers.user_serializers import (
     RegisterUserSerializer,
     UserLoginSerializer,
     UserSerializerWithToken,
-    UserSerializer
+    UserSerializer,
+    UpdateProfileSerializer,
 )
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.permissions import AllowAny
 from core.utils import global_response_errors
 
@@ -190,6 +193,97 @@ class AuthenViewSet(viewsets.ViewSet):
         return global_response_errors(serializer.errors)
 
 
+    @action(detail=False, methods=["post"], url_path="forgot-password", permission_classes=[AllowAny], authentication_classes=[])
+    def forgot_password(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response(
+                {"status": False, "message": "Email is required!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(email=email.lower())
+        except User.DoesNotExist:
+            return Response(
+                {"status": False, "message": "No account found with this email!"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not user.is_active:
+            return Response(
+                {"status": False, "message": "Account is not activated yet!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        import random
+        otp = str(random.randint(100000, 999999))
+        user.otp = otp
+        user.otp_created_at = timezone.now()
+        user.save()
+
+        MailService.send_reset_password_otp(user.email, otp)
+
+        return Response(
+            {"status": True, "message": "Password reset OTP has been sent to your email!"},
+            status=status.HTTP_200_OK,
+        )
+
+
+    @action(detail=False, methods=["post"], url_path="reset-password", permission_classes=[AllowAny], authentication_classes=[])
+    def reset_password(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+        new_password = request.data.get("new_password")
+
+        if not email or not otp or not new_password:
+            return Response(
+                {"status": False, "message": "Email, OTP, and new password are required!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(email=email.lower())
+        except User.DoesNotExist:
+            return Response(
+                {"status": False, "message": "No account found with this email!"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if user.otp != otp:
+            return Response(
+                {"status": False, "message": "Invalid OTP code!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        now = timezone.now()
+        if (now - user.otp_created_at).total_seconds() > 300:
+            return Response(
+                {"status": False, "message": "OTP has expired! Please request a new one."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password, user)
+        except DjangoValidationError as e:
+            return Response(
+                {"status": False, "message": e.messages[0]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.otp = None
+        user.otp_created_at = None
+        user.set_new_token_version()
+        user.save()
+
+        return Response(
+            {"status": True, "message": "Password has been reset successfully! You can now log in."},
+            status=status.HTTP_200_OK,
+        )
+
+
     @action(methods=["post"], detail=False, url_path="logout")
     def logout_user(self, request):
         try:
@@ -206,6 +300,31 @@ class AuthenViewSet(viewsets.ViewSet):
             raise AuthenticationFailed(f"{str(e)}!")
         except InvalidToken as e:
             raise AuthenticationFailed(f"{str(e)}!")
+
+
+    @action(methods=["get"], detail=False, url_path="me")
+    def get_me(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(
+            {"status": True, "data": serializer.data, "message": "User profile retrieved."},
+            status=status.HTTP_200_OK,
+        )
+
+
+    @action(methods=["patch"], detail=False, url_path="me/update")
+    def update_profile(self, request):
+        serializer = UpdateProfileSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.update(request.user, serializer.validated_data)
+            return Response(
+                {
+                    "status": True,
+                    "data": UserSerializer(user).data,
+                    "message": "Profile updated successfully!",
+                },
+                status=status.HTTP_200_OK,
+            )
+        return global_response_errors(serializer.errors)
 
 
 class CustomTokenRefreshView(TokenRefreshView):

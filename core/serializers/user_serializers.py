@@ -66,13 +66,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        if representation.get("avatar"):
+        avatar = representation.get("avatar")
+        if avatar and not avatar.startswith("http"):
             representation["avatar"] = (
-                f"{os.environ.get("BE_DOMAIN")}{representation['avatar']}"
+                f"{os.environ.get('BE_DOMAIN')}{avatar}"
             )
         return representation
-
-
 
 
 class RegisterUserSerializer(serializers.Serializer):
@@ -138,7 +137,8 @@ class RegisterUserSerializer(serializers.Serializer):
         return data
 
     def validate_email(self, value):
-        if User.objects.filter(email=value.lower()).exists():
+        existing = User.objects.filter(email=value.lower()).first()
+        if existing and existing.is_active:
             raise serializers.ValidationError("Email already exists!")
         return value
 
@@ -155,15 +155,25 @@ class RegisterUserSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        validated_data["email"] = validated_data["email"].lower()
-        validated_data["is_active"] = False  
+        email = validated_data["email"].lower()
+        otp = str(random.randint(100000, 999999))
+
+        existing = User.objects.filter(email=email).first()
+        if existing and not existing.is_active:
+            existing.first_name = validated_data.get("first_name", existing.first_name)
+            existing.last_name = validated_data.get("last_name", existing.last_name)
+            existing.set_password(validated_data.get("password", "Defaultpassword@123"))
+            existing.otp = otp
+            existing.otp_created_at = timezone.now()
+            existing.save()
+            return existing
+
+        validated_data["email"] = email
+        validated_data["is_active"] = False
         user = User(**validated_data)
         user.set_password(validated_data.get("password", "Defaultpassword@123"))
-        
-        otp = str(random.randint(100000, 999999))
         user.otp = otp
         user.otp_created_at = timezone.now()
-        
         user.save()
         return user
 
@@ -236,3 +246,44 @@ class UserSerializerWithToken(UserSerializer):
         representation["refresh_token"] = self.context.get("refresh_token")
         representation["access_token"] = self.context.get("access_token")
         return representation
+
+
+class UpdateProfileSerializer(serializers.Serializer):
+    first_name = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        error_messages={
+            "blank": "First name cannot be empty!",
+        },
+    )
+    last_name = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        error_messages={
+            "blank": "Last name cannot be empty!",
+        },
+    )
+    avatar = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
+    def validate(self, data):
+        char_fields = ["first_name", "last_name"]
+        for field in char_fields:
+            if field in data:
+                validate_max_length(
+                    data[field],
+                    User._meta.get_field(field).max_length,
+                    field.replace("_", " ").capitalize(),
+                )
+        return data
+
+    def update(self, instance, validated_data):
+        instance.first_name = validated_data.get("first_name", instance.first_name)
+        instance.last_name = validated_data.get("last_name", instance.last_name)
+        if "avatar" in validated_data:
+            instance.avatar = validated_data.get("avatar") or None
+        instance.save()
+        return instance

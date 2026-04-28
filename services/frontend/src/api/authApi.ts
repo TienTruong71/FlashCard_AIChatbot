@@ -38,4 +38,16 @@ export const authApi = {
 
   listUsers: (params?: PaginationParams) =>
     axiosInstance.get<PaginatedResponse<User>>(`${AUTH_BASE}/`, { params }),
+
+  forgotPassword: (email: string) =>
+    axiosInstance.post<ApiResponse<void>>(`${AUTH_BASE}/forgot-password/`, { email }),
+
+  resetPassword: (payload: { email: string; otp: string; new_password: string }) =>
+    axiosInstance.post<ApiResponse<void>>(`${AUTH_BASE}/reset-password/`, payload),
+
+  getMe: () =>
+    axiosInstance.get<ApiResponse<User>>(`${AUTH_BASE}/me/`),
+
+  updateProfile: (payload: { first_name?: string; last_name?: string; avatar?: string }) =>
+    axiosInstance.patch<ApiResponse<User>>(`${AUTH_BASE}/me/update/`, payload),
 }

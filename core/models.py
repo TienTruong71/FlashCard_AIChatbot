@@ -14,15 +14,11 @@ class User(AbstractBaseUser, TimeStampedModel, SoftDeleteModel):
     last_name = models.CharField(max_length=255, null=True)
     is_active = models.BooleanField(default=True)
     role = models.IntegerField(default=1)
-    avatar = models.ImageField(
-        upload_to="avatar/",
+    avatar = models.CharField(
+        max_length=500,
         blank=True,
         default=None,
         null=True,
-        validators=[
-            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "webp"])
-        ],
-        max_length=255,
     )
     status = models.BooleanField(default=True)
     otp = models.CharField(max_length=6, null=True, blank=True)
@@ -216,6 +212,7 @@ class QuizQuestionAnswer(models.Model):
 
     class Meta:
         db_table = "quizzes_question_answer"
+
 
 class Test(models.Model):
     STATUS_CHOICES = tuple((e.value, e.name.replace("_", " ").title()) for e in TestStatusEnum)

@@ -78,3 +78,18 @@ class MailService:
         except Exception as e:
             logger.error(f"[MailService] Failed to send OTP to {user_email}: {str(e)}")
             return False
+
+    @staticmethod
+    def send_reset_password_otp(user_email, otp):
+        subject = "Mã đặt lại mật khẩu của bạn"
+        context = {"otp": otp, "is_reset": True}
+        html_message = render_to_string("auth/verify_otp.html", context)
+        plain_message = strip_tags(html_message)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+
+        try:
+            send_mail(subject, plain_message, from_email, [user_email], fail_silently=False, html_message=html_message)
+            return True
+        except Exception as e:
+            logger.error(f"[MailService] Failed to send reset OTP to {user_email}: {str(e)}")
+            return False

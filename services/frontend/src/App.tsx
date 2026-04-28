@@ -16,6 +16,7 @@ import { SetDetailPage } from './pages/SetDetailPage'
 import { QuizDetailPage } from './pages/QuizDetailPage'
 import { TestPage } from './pages/TestPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { ChatWidget } from './components/ChatWidget'
 import { useLayoutStore } from './store/layoutStore'
 import { useThemeStore } from './store/themeStore'
@@ -79,6 +80,10 @@ const router = createBrowserRouter([
           {
             path: '/tests/:id',
             element: <TestPage />,
+          },
+          {
+            path: '/profile',
+            element: <ProfilePage />,
           },
         ],
       },

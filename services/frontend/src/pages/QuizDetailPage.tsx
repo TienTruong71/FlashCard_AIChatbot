@@ -303,7 +303,6 @@ export const QuizDetailPage = () => {
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, marginTop: 8 }}>
         <div style={{ flex: 1, paddingRight: 24 }}>
           <h1 className="page-title" style={{ marginBottom: 6 }}>{quizInfo.title}</h1>
@@ -341,7 +340,6 @@ export const QuizDetailPage = () => {
       </div>
 
       <div className="ai-shell" style={{ marginTop: 24 }}>
-        {/* Left: Questions editor */}
         <div>
           {loading ? (
             <p style={{ color: 'var(--text-muted)' }}>{t.common_loading}</p>
@@ -636,7 +634,6 @@ export const QuizDetailPage = () => {
             )}
           </div>
 
-          {/* Set Insights - dark card */}
           <div className="insights-dark">
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
               {t.ai_setInsights}
@@ -666,7 +663,6 @@ export const QuizDetailPage = () => {
             </div>
           </div>
 
-          {/* Test history */}
           {tests.length > 0 && (
             <div className="card" style={{ padding: 16, marginTop: 16 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Recent Attempts</p>
@@ -708,7 +704,7 @@ export const QuizDetailPage = () => {
               onChange={e => setShareEmail(e.target.value)}
             />
           </div>
-            
+
         </Space>
 
         {(quizInfo.shares && quizInfo.shares.length > 0) && (

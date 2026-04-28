@@ -1,11 +1,9 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   BookOpen,
-  FileQuestion,
   BarChart2,
   HelpCircle,
-  LogOut,
   Plus,
   Languages,
   Sun,
@@ -25,16 +23,10 @@ const navItems = [
 
 export const Sidebar = () => {
   const location = useLocation()
-  const navigate = useNavigate()
-  const { logout, user } = useAuthStore()
+  const { user } = useAuthStore()
   const { language, toggle: toggleLang } = useLanguageStore()
   const { theme, toggleTheme } = useThemeStore()
   const t = translations[language]
-
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login')
-  }
 
   const isActive = (key: string) => {
     if (key === '/sets') return location.pathname.startsWith('/sets')
@@ -93,15 +85,6 @@ export const Sidebar = () => {
         <button className="sidebar-nav-item" style={{ cursor: 'pointer' }}>
           <HelpCircle size={16} />
           {t.nav_helpCenter}
-        </button>
-
-        <button
-          className="sidebar-nav-item"
-          style={{ color: 'var(--danger)' }}
-          onClick={handleLogout}
-        >
-          <LogOut size={16} />
-          {t.nav_signOut}
         </button>
       </div>
     </aside>
