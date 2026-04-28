@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Send, Loader2, MessageSquare, PlusCircle, Search, Trash2 } from 'lucide-react';
+import { X, Send, Loader2, LayoutList, PlusCircle, Search, Trash2, Calendar, MessageSquareText } from 'lucide-react';
 import './ChatWidget.css';
 import { useLanguageStore } from '../store/languageStore';
 import { translations } from '../i18n';
@@ -23,6 +23,7 @@ export const ChatWidget: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingSidebar, setIsFetchingSidebar] = useState(false);
   const [isFetchingMain, setIsFetchingMain] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const [quizSearch, setQuizSearch] = useState('');
   const [quizPage, setQuizPage] = useState(1);
@@ -105,6 +106,7 @@ export const ChatWidget: React.FC = () => {
       const res = await aiApi.createConversation(undefined, "General Study Chat");
       setCurrentConv(res.data);
       setMessages([]);
+      setSuggestions([]);
       setView('chat');
       loadConversations();
     } catch (e) {
@@ -120,6 +122,7 @@ export const ChatWidget: React.FC = () => {
       const res = await aiApi.createConversation(quiz.id, `Chat about ${quiz.title}`);
       setCurrentConv(res.data);
       setMessages([]);
+      setSuggestions([]);
       setView('chat');
       loadConversations();
     } catch (e) {
@@ -133,6 +136,7 @@ export const ChatWidget: React.FC = () => {
     setCurrentConv(conv);
     setView('chat');
     setIsFetchingMain(true);
+    setSuggestions([]);
     try {
       const res = await aiApi.getMessages(conv.id);
       setMessages(res.data);
@@ -157,6 +161,7 @@ export const ChatWidget: React.FC = () => {
       if (currentConv?.id === id) {
         setCurrentConv(null);
         setMessages([]);
+        setSuggestions([]);
         setView('empty');
       }
       loadConversations();
@@ -167,18 +172,20 @@ export const ChatWidget: React.FC = () => {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || !currentConv || isLoading) return;
+  const handleSend = async (customMessage?: string) => {
+    const messageToSend = customMessage || input.trim();
+    if (!messageToSend || !currentConv || isLoading) return;
 
     const userMsg: AIChatMessage = {
       id: Date.now(),
       role: 'user',
-      content: input.trim(),
+      content: messageToSend,
       created: new Date().toISOString()
     };
 
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setSuggestions([]);
     setIsLoading(true);
 
     try {
@@ -190,6 +197,8 @@ export const ChatWidget: React.FC = () => {
         created: new Date().toISOString()
       };
       setMessages(prev => [...prev, aiMsg]);
+      setSuggestions(res.data.suggestions || []);
+
       if (messages.length === 0) {
         setTimeout(() => loadConversations(), 2000);
       }
@@ -207,55 +216,98 @@ export const ChatWidget: React.FC = () => {
     }
   };
 
-  const renderSidebar = () => (
-    <div className="chat-sidebar">
-      <div className="chat-sidebar-header">
-        {language === 'vi' ? 'Lịch sử trò chuyện' : 'Recent Chats'}
+  const groupConversations = () => {
+    const groups: { [key: string]: AIChatConversation[] } = {
+      'Today': [],
+      'Yesterday': [],
+      'Older': []
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    conversations.forEach(c => {
+      const d = new Date(c.created);
+      d.setHours(0, 0, 0, 0);
+      if (d.getTime() === today.getTime()) groups['Today'].push(c);
+      else if (d.getTime() === yesterday.getTime()) groups['Yesterday'].push(c);
+      else groups['Older'].push(c);
+    });
+
+    return groups;
+  };
+
+  const renderSidebar = () => {
+    const groups = groupConversations();
+    const groupLabels: { [key: string]: string } = {
+      'Today': language === 'vi' ? 'Hôm nay' : 'Today',
+      'Yesterday': language === 'vi' ? 'Hôm qua' : 'Yesterday',
+      'Older': language === 'vi' ? 'Cũ hơn' : 'Older'
+    };
+
+    return (
+      <div className="chat-sidebar">
+        <div className="chat-sidebar-header">
+          {language === 'vi' ? 'Lịch sử trò chuyện' : 'Recent Chats'}
+        </div>
+        <div className="chat-sidebar-body">
+          {isFetchingSidebar ? (
+            <div style={{ textAlign: 'center', padding: '20px' }}><Loader2 className="spin" size={18} /></div>
+          ) : (
+            Object.entries(groups).map(([key, items]) => (
+              items.length > 0 && (
+                <React.Fragment key={key}>
+                  <div className="chat-date-group">{groupLabels[key]}</div>
+                  {items.map(c => (
+                    <div key={c.id} className={`chat-sidebar-item-container ${currentConv?.id === c.id ? 'active' : ''}`}>
+                      <button
+                        className="chat-sidebar-item"
+                        onClick={() => handleSelectConversation(c)}
+                      >
+                        <LayoutList size={18} />
+                        <span className="chat-sidebar-item-title">
+                          {c.title}
+                        </span>
+                      </button>
+                      <button
+                        className="chat-sidebar-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteConversationById(c.id);
+                        }}
+                        title={language === 'vi' ? 'Xóa' : 'Delete'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </React.Fragment>
+              )
+            ))
+          )}
+        </div>
+        <div className="chat-sidebar-footer">
+          <button className="chat-new-btn" onClick={handleNewChat}>
+            <PlusCircle size={18} />
+            {language === 'vi' ? 'Cuộc trò chuyện mới' : 'New Chat'}
+          </button>
+        </div>
       </div>
-      <div className="chat-sidebar-body">
-        {isFetchingSidebar ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}><Loader2 className="spin" size={18} /></div>
-        ) : (
-          conversations.map(c => (
-            <div key={c.id} className={`chat-sidebar-item-container ${currentConv?.id === c.id ? 'active' : ''}`}>
-              <button
-                className="chat-sidebar-item"
-                onClick={() => handleSelectConversation(c)}
-              >
-                <MessageSquare size={16} />
-                <span className="chat-sidebar-item-title">
-                  {c.title}
-                </span>
-              </button>
-              <button
-                className="chat-sidebar-delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteConversationById(c.id);
-                }}
-                title={language === 'vi' ? 'Xóa' : 'Delete'}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-      <div className="chat-sidebar-footer">
-        <button className="chat-new-btn" onClick={handleNewChat}>
-          <PlusCircle size={16} />
-          {language === 'vi' ? 'Cuộc trò chuyện mới' : 'New Chat'}
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderMainContent = () => {
     if (view === 'empty') {
       return (
         <div className="chat-empty-state">
-          <img src="/chatbot-icon.png" alt="AI" style={{ width: 80, height: 80, marginBottom: 16, borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }} />
-          <p>{language === 'vi' ? 'Chọn một cuộc trò chuyện từ danh sách hoặc tạo mới.' : 'Select a conversation from the sidebar or start a new one.'}</p>
+          <div style={{ position: 'relative', marginBottom: '24px' }}>
+            <img src="/chatbot-icon.png" alt="AI" style={{ width: 120, height: 120, borderRadius: '32px', boxShadow: '0 16px 40px rgba(99, 102, 241, 0.25)', border: '4px solid white' }} />
+          </div>
+          <p style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b' }}>
+            {language === 'vi' ? 'Chọn một cuộc trò chuyện từ danh sách hoặc tạo mới.' : 'Select a conversation from the sidebar or start a new one.'}
+          </p>
         </div>
       );
     }
@@ -264,15 +316,14 @@ export const ChatWidget: React.FC = () => {
       return (
         <div className="chat-main-body">
           <div className="chat-message assistant">
-            <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /></div>
+            <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" /></div>
             <div className="chat-bubble">
               <p>{language === 'vi' ? 'Chào bạn! Chọn Quiz bạn muốn ôn tập nhé.' : 'Hi! Pick a quiz you\'d like to review.'}</p>
             </div>
           </div>
 
-          {/* Search Bar */}
           <div className="quiz-search-wrapper">
-            <Search size={16} className="quiz-search-icon" />
+            <Search size={18} className="quiz-search-icon" />
             <input
               type="text"
               className="quiz-search-input"
@@ -282,9 +333,8 @@ export const ChatWidget: React.FC = () => {
             />
           </div>
 
-          {/* Quiz List */}
           {isFetchingMain ? (
-            <div style={{ textAlign: 'center', padding: '20px' }}><Loader2 className="spin" /></div>
+            <div style={{ textAlign: 'center', padding: '40px' }}><Loader2 className="spin" size={32} color="#6366f1" /></div>
           ) : (
             <div className="quiz-list">
               {quizzes.length > 0 ? (
@@ -300,7 +350,7 @@ export const ChatWidget: React.FC = () => {
                   ))}
                   {quizPage < quizTotalPages && (
                     <button className="quiz-load-more" onClick={handleLoadMore} disabled={isLoadingMore}>
-                      {isLoadingMore ? <Loader2 size={14} className="spin" /> : (language === 'vi' ? 'Tải thêm...' : 'Load more...')}
+                      {isLoadingMore ? <Loader2 size={16} className="spin" /> : (language === 'vi' ? 'Tải thêm...' : 'Load more...')}
                     </button>
                   )}
                 </>
@@ -323,26 +373,38 @@ export const ChatWidget: React.FC = () => {
         <div className="chat-main-body">
           {messages.length === 0 && !isFetchingMain && (
             <div className="chat-message assistant">
-              <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /></div>
+              <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" /></div>
               <div className="chat-bubble">
                 <p>{language === 'vi' ? 'Tôi đã sẵn sàng! Hãy hỏi tôi bất cứ điều gì về bài Quiz này.' : 'I am ready! Ask me anything about this quiz.'}</p>
               </div>
             </div>
           )}
-          {messages.map(msg => (
-            <div key={msg.id} className={`chat-message ${msg.role}`}>
-              {msg.role === 'assistant' && (
-                <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /></div>
-              )}
-              <div className="chat-bubble">
-                <p style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{msg.content}</p>
+          {messages.map((msg, idx) => (
+            <React.Fragment key={msg.id}>
+              <div className={`chat-message ${msg.role}`}>
+                {msg.role === 'assistant' && (
+                  <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" /></div>
+                )}
+                <div className="chat-bubble">
+                  <p style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{msg.content}</p>
+                </div>
               </div>
-            </div>
+              {/* Show suggestions only for the last assistant message */}
+              {msg.role === 'assistant' && idx === messages.length - 1 && suggestions.length > 0 && (
+                <div className="suggestions-container">
+                  {suggestions.map((s, i) => (
+                    <button key={i} className="suggestion-chip" onClick={() => handleSend(s)}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </React.Fragment>
           ))}
           {isLoading && (
             <div className="chat-message assistant">
-              <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /></div>
-              <div className="chat-bubble"><Loader2 size={14} className="spin" /></div>
+              <div className="chat-avatar"><img src="/chatbot-icon.png" alt="AI" /></div>
+              <div className="chat-bubble"><Loader2 size={18} className="spin" /></div>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -358,8 +420,8 @@ export const ChatWidget: React.FC = () => {
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               disabled={isLoading || isFetchingMain}
             />
-            <button className="chat-send-btn" onClick={handleSend} disabled={!input.trim() || isLoading}>
-              <Send size={16} />
+            <button className="chat-send-btn" onClick={() => handleSend()} disabled={!input.trim() || isLoading}>
+              <Send size={20} />
             </button>
           </div>
         </div>
@@ -375,10 +437,10 @@ export const ChatWidget: React.FC = () => {
           <div className="chat-main">
             <div className="chat-main-header">
               <h3>
-                <img src="/chatbot-icon.png" alt="AI" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                <img src="/chatbot-icon.png" alt="AI" style={{ borderRadius: '10px' }} />
                 {currentConv ? currentConv.title : (language === 'vi' ? 'AI Trợ lý' : 'AI Assistant')}
               </h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 {currentConv && (
                   <button className="chat-widget-close" onClick={handleDeleteConversation} title="Delete Conversation">
                     <Trash2 size={20} />
@@ -396,7 +458,7 @@ export const ChatWidget: React.FC = () => {
 
       {!isOpen && (
         <button className="chat-widget-button" onClick={() => setIsOpen(true)}>
-          <img src="/chatbot-icon.png" alt="AI Assistant" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
+          <img src="/chatbot-icon.png" alt="AI Assistant" />
         </button>
       )}
     </div>

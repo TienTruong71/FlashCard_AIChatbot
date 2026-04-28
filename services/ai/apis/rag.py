@@ -58,7 +58,8 @@ def get_answer(query, user, quiz=None, chat_history=None):
             "2. BE EXTREMELY CONCISE. Keep answers very short (1-3 sentences) unless the user asks for a deep dive.\n"
             "3. NO ASTERISK LISTS. Use numbers (1., 2.) or dashes (-) for lists instead of asterisks (*).\n"
             "4. SELECTIVE CONTEXT: Only discuss specific quiz results or performance metrics if the user specifically asks about them (e.g., 'how did I do?', 'scores?'). Otherwise, be a general assistant.\n"
-            "5. NO YAPPING. Do not give long introductions or conclusions.\n\n"
+            "5. NO YAPPING. Do not give long introductions or conclusions.\n"
+            "6. SUGGESTED QUESTIONS: At the very end of your response, always provide exactly 3 suggested follow-up questions for the user. Format them as a single line starting with '[SUGGESTIONS]:' followed by the questions separated by '|'. Example: [SUGGESTIONS]: Question 1 | Question 2 | Question 3\n\n"
             f"CONTEXT:\n{context}"
         ))
     ]
@@ -71,10 +72,21 @@ def get_answer(query, user, quiz=None, chat_history=None):
 
     try:
         response = llm.invoke(messages)
-        return response.content
+        full_content = response.content
+        
+        answer = full_content
+        suggestions = []
+        
+        if "[SUGGESTIONS]:" in full_content:
+            parts = full_content.split("[SUGGESTIONS]:")
+            answer = parts[0].strip()
+            suggestion_str = parts[1].strip()
+            suggestions = [s.strip() for s in suggestion_str.split("|") if s.strip()]
+            
+        return {"answer": answer, "suggestions": suggestions}
     except Exception as e:
         logger.error(f"AI Error: {e}", exc_info=True)
-        return f"Sorry, I encountered an error: {str(e)}"
+        return {"answer": f"Sorry, I encountered an error: {str(e)}", "suggestions": []}
 
 def ingest_quiz(quiz_id, user=None):
     return True

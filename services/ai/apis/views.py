@@ -83,8 +83,11 @@ class ChatbotViewSet(viewsets.ViewSet):
                 user_msg = None
 
         try:
-            answer = get_answer(query, request.user, quiz=conv.quiz, chat_history=chat_history)
+            result = get_answer(query, request.user, quiz=conv.quiz, chat_history=chat_history)
+            answer = result.get("answer")
+            suggestions = result.get("suggestions", [])
+            
             AIChatMessage.objects.create(conversation=conv, role="assistant", content=answer)
-            return Response({"answer": answer}, status=status.HTTP_200_OK)
+            return Response({"answer": answer, "suggestions": suggestions}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
