@@ -76,12 +76,12 @@ export const SetDetailPage = () => {
 
   // Sync Slider value when questions load
   useEffect(() => {
-    if (questions.length > 0) {
-      setQuestionCount(prev => Math.min(prev, questions.length) || Math.min(25, questions.length))
+    if (totalItems > 0) {
+      setQuestionCount(prev => Math.min(prev, totalItems) || Math.min(25, totalItems))
     } else {
       setQuestionCount(0)
     }
-  }, [questions.length])
+  }, [totalItems])
 
   const handleCreateQuestion = async (values: any) => {
     try {
@@ -134,7 +134,7 @@ export const SetDetailPage = () => {
       }
 
       if (quizMode === 'random') {
-        payload.question_count = Math.min(Number(values.question_count), questions.length)
+        payload.question_count = Math.min(Number(values.question_count), totalItems)
       } else {
         if (selectedQuestionIds.length === 0) return message.error('Vui lòng chọn ít nhất 1 câu hỏi!')
         payload.question_ids = selectedQuestionIds
@@ -483,11 +483,11 @@ export const SetDetailPage = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ flex: 1 }}>
                   <Slider
-                    min={questions.length > 0 ? 1 : 0}
-                    max={questions.length > 0 ? questions.length : 1}
-                    value={questions.length === 0 ? 0 : questionCount}
+                    min={totalItems > 0 ? 1 : 0}
+                    max={totalItems > 0 ? totalItems : 1}
+                    value={totalItems === 0 ? 0 : questionCount}
                     onChange={setQuestionCount}
-                    disabled={questions.length === 0}
+                    disabled={totalItems === 0}
                     trackStyle={{ background: 'var(--primary)' }}
                     handleStyle={{ borderColor: 'var(--primary)', background: 'var(--primary)' }}
                   />
@@ -497,7 +497,7 @@ export const SetDetailPage = () => {
                   borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontWeight: 700, fontSize: 14, color: 'var(--text)', flexShrink: 0,
                 }}>
-                  {questions.length === 0 ? 0 : questionCount}
+                  {totalItems === 0 ? 0 : questionCount}
                 </div>
               </div>
             </div>
@@ -507,10 +507,10 @@ export const SetDetailPage = () => {
               style={{ marginTop: 24 }}
               onClick={() => {
                 setQuizMode('random')
-                quizForm.setFieldsValue({ question_count: questions.length === 0 ? 0 : Math.min(questionCount, questions.length) })
+                quizForm.setFieldsValue({ question_count: totalItems === 0 ? 0 : Math.min(questionCount, totalItems) })
                 setQuizModalOpen(true)
               }}
-              disabled={questions.length === 0}
+              disabled={totalItems === 0}
             >
               <Plus size={13} /> {t.config_createQuiz}
             </button>
@@ -522,7 +522,7 @@ export const SetDetailPage = () => {
                 setSelectedQuestionIds([])
                 setQuizModalOpen(true)
               }}
-              disabled={questions.length === 0}
+              disabled={totalItems === 0}
             >
               {t.config_createQuiz} (Thủ công)
             </button>
@@ -614,7 +614,7 @@ export const SetDetailPage = () => {
 
           {quizMode === 'random' ? (
             <Form.Item name="question_count" label={t.config_questionCount} rules={[{ required: true }]}>
-              <Input type="number" min={1} max={questions.length} />
+              <Input type="number" min={1} max={totalItems} />
             </Form.Item>
           ) : (
             <div style={{ marginBottom: 20 }}>

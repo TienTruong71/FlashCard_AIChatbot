@@ -6,8 +6,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from core.paginators import CustomPaginator
 from core.filters import SetFilter, QuestionFilter, QuizFilter
-from core.models import Set, User, SetShare, Quiz, QuizQuestion, QuizQuestionAnswer, Question
+from core.models import Set, User, SetShare, Quiz, QuizQuestion, QuizQuestionAnswer, Question, Answer
 import random
+import os
+import json
+import requests
+from core.utils.document_parser import parse_document
 
 from django.core.mail import send_mail
 from django.conf import settings
@@ -199,7 +203,7 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
                     "permission": permission
                 }
             )
-            
+
             send_share_notification(
                 recipient=user,
                 item_title=set.title,
@@ -398,3 +402,92 @@ class SetViewSet(viewsets.ViewSet, _BaseSetViewSet):
         page = paginator.paginate_queryset(sets.qs, request)
         serializer = QuizSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
+    @action(detail=False, methods=["post"], url_path="upload-doc")
+    def upload_doc(self, request):
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return Response({"status": False, "message": "No file provided!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        extracted_text = parse_document(file_obj, file_obj.name)
+        if not extracted_text:
+            return Response({"status": False, "message": "Could not parse document!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        key = os.environ.get("GOOGLE_API_KEY")
+        if not key:
+            return Response({"status": False, "message": "GOOGLE_API_KEY not configured"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={key}"
+        prompt = f"""Based on the following document text, generate a set of single-choice questions.
+Return ONLY a valid JSON object in the following format:
+{{
+    "title": "A short title for the set",
+    "description": "A short description",
+    "questions": [
+        {{
+            "title": "Question text",
+            "type": "single",
+            "answers": [
+                {{"content": "Answer A", "is_correct": true}},
+                {{"content": "Answer B", "is_correct": false}},
+                {{"content": "Answer C", "is_correct": false}},
+                {{"content": "Answer D", "is_correct": false}}
+            ]
+        }}
+    ]
+}}
+Document Text:
+{extracted_text}
+"""
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+
+        try:
+            response = requests.post(url, json=payload, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                text = data['candidates'][0]['content']['parts'][0]['text'].strip()
+                # Remove markdown formatting if any
+                if text.startswith('```json'):
+                    text = text[7:]
+                if text.startswith('```'):
+                    text = text[3:]
+                if text.endswith('```'):
+                    text = text[:-3]
+
+                parsed_data = json.loads(text.strip())
+
+                with transaction.atomic():
+                    new_set = Set.objects.create(
+                        user=request.user,
+                        title=parsed_data.get("title", "Generated Set"),
+                        description=parsed_data.get("description", ""),
+                        is_public=False
+                    )
+
+                    for q in parsed_data.get("questions", []):
+                        question = Question.objects.create(
+                            set=new_set,
+                            title=q.get("title"),
+                            type=q.get("type", "single")
+                        )
+                        for ans in q.get("answers", []):
+                            Answer.objects.create(
+                                question=question,
+                                content=ans.get("content"),
+                                is_correct=ans.get("is_correct")
+                            )
+
+                return Response(
+                    {
+                        "status": True,
+                        "data": SetSerializer(new_set, context={'request': request}).data,
+                        "message": "Set generated successfully!"
+                    },
+                    status=status.HTTP_201_CREATED
+                )
+            else:
+                return Response({"status": False, "message": "Failed to generate set from AI"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({"status": False, "message": f"Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

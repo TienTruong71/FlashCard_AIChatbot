@@ -14,12 +14,12 @@ class ChatbotViewSet(viewsets.ViewSet):
         quiz_id = request.data.get("quiz_id")
         if not quiz_id:
             return Response({"error": "quiz_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-            
+
         success = ingest_quiz(quiz_id, user=request.user)
         if success:
             return Response({"message": "Quiz and user performance ingested successfully"}, status=status.HTTP_200_OK)
         return Response({"error": "Failed to ingest or quiz not found"}, status=status.HTTP_404_NOT_FOUND)
-        
+
 
     @action(detail=False, methods=["get"])
     def conversations(self, request):

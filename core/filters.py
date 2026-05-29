@@ -125,7 +125,7 @@ class QuizFilter(filters.FilterSet):
             "created_at": "Created Time",
             "updated_at": "Updated Time",
         }
-    ) 
+    )
 
     class Meta:
         model = Quiz
@@ -156,7 +156,7 @@ class TestFilter(filters.FilterSet):
             "created_at": "Created Time",
             "updated_at": "Updated Time",
         }
-    ) 
+    )
 
     class Meta:
         model = Test

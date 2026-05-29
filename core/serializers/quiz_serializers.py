@@ -293,7 +293,6 @@ class UpdateQuizQuestionSerializer(QuizQuestionValidationMixin , serializers.Mod
 
                     for ans in answers_data:
                         ans_id = ans.pop("id", None)
-
                         if ans_id and ans_id in existing_answer:
                             answer_obj = existing_answer[ans_id]
 

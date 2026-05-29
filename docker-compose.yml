@@ -283,6 +283,10 @@ services:
     build:
       context: ./services/frontend
       dockerfile: Dockerfile.dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     volumes:
       - ./services/frontend:/usr/src/app
       - /usr/src/app/node_modules
@@ -307,11 +311,12 @@ services:
 
   db:
     image: postgres:16
+    command: postgres -c shared_buffers=128MB
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     ports:
-      - 5434:5432
+      - 5435:5432
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -325,7 +330,6 @@ volumes:
   static_volume:
   media_volume:
   node_modules_volume:
-
 
 networks:
   redis_network:

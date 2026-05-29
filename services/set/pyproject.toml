@@ -42,7 +42,7 @@ uvicorn = "^0.34.0"
 django-simple-history = "^3.8.0"
 pyodbc = "^5.2.0"
 mssql-django = "^1.5"
-
+python-docx = "^1.1.2"
 
 [build-system]
 requires = ["poetry-core"]

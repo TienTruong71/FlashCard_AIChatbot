@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Modal, Input, Select, Space, message } from 'antd'
 import { setApi, testApi, quizApi } from '../api'
 import type { Set, Quiz, Test } from '../types'
@@ -25,12 +25,15 @@ export const DashboardPage = () => {
   const [tests, setTests] = useState<Test[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Share states
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [shareItem, setShareItem] = useState<Set | Quiz | null>(null)
   const [shareEmail, setShareEmail] = useState('')
   const [sharePermission, setSharePermission] = useState<'view' | 'edit'>('view')
   const [sharing, setSharing] = useState(false)
+
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,6 +89,36 @@ export const DashboardPage = () => {
     }
   }
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const validTypes = ['.doc', '.docx', '.pdf']
+    const isValidType = validTypes.some(type => file.name.toLowerCase().endsWith(type))
+    if (!isValidType) {
+      message.error(t.common_error || 'Please upload a valid document format (.doc, .docx, .pdf)')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const response = await setApi.uploadDoc(file)
+      if (response.data?.status && response.data?.data) {
+        message.success(t.common_success || 'Set generated successfully!')
+        navigate(`/sets/${response.data.data.id}`)
+      } else {
+        message.error(response.data?.message || t.common_error)
+      }
+    } catch (error: any) {
+      message.error(error.errorMessage || error.message || t.common_error)
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   return (
     <div>
       {/* Welcome */}
@@ -118,9 +151,21 @@ export const DashboardPage = () => {
               {t.dash_heroDesc}
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
-              <Link to="/sets" className="btn btn-primary btn-sm" style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', gap: 6 }}>
-                <Upload size={13} /> {t.dash_aiUpload}
-              </Link>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".doc,.docx,.pdf"
+                style={{ display: 'none' }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="btn btn-primary btn-sm"
+                style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', gap: 6, cursor: isUploading ? 'not-allowed' : 'pointer' }}
+              >
+                <Upload size={13} /> {isUploading ? (t.common_loading || 'Uploading...') : t.dash_aiUpload}
+              </button>
               <Link to="/sets" className="btn btn-outline btn-sm" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.4)', color: 'white' }}>
                 {t.dash_learnMore}
               </Link>

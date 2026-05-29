@@ -64,4 +64,14 @@ export const setApi = {
 
   listQuizzes: (id: number, params?: PaginationParams) =>
     axiosInstance.get<PaginatedResponse<Quiz>>(`${SET_BASE}/${id}/list_quizzes/`, { params }),
+
+  uploadDoc: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return axiosInstance.post<ApiResponse<Set>>(`${SET_BASE}/upload-doc/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  }
 }

@@ -31,14 +31,14 @@ class SetSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return None
-        
+
         if obj.user == request.user:
             return "edit"
-        
+
         share = SetShare.objects.filter(set=obj, user=request.user).first()
         if share:
             return share.permission
-        
+
         return None
 
     def get_share_count(self, obj):
